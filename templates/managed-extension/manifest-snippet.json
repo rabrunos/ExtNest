@@ -1,0 +1,12 @@
+{
+  "externally_connectable": {
+    "ids": [
+      "econfanmnmmcggpgdflcipmdlmkcbiag",
+      "EDGE_STORE_EXTENSION_ID",
+      "CHROME_WEB_STORE_EXTENSION_ID"
+    ]
+  },
+  "permissions": [
+    "storage"
+  ]
+}

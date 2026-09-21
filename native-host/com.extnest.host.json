@@ -1,0 +1,9 @@
+{
+  "name": "com.extnest.host",
+  "description": "ExtNest Native Messaging Host",
+  "path": "extnest_host.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://econfanmnmmcggpgdflcipmdlmkcbiag/"
+  ]
+}

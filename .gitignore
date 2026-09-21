@@ -1,0 +1,26 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build / release
+dist/
+build/
+*.crx
+*.pem
+
+# Local secrets and tokens
+*.token
+.env
+.env.*
+secrets/
+
+# ExtNest runtime data must never enter the repo
+ExtNestData/

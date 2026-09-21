@@ -1,0 +1,3 @@
+// Example classic MV3 service worker.
+importScripts("extnest/bridge-config.js", "extnest/bridge.js");
+// Your normal extension listeners below...

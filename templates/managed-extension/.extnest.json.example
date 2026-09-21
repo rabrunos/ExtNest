@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "displayName": "Minha Extensão",
+  "entry": ".",
+  "configBridge": true
+}
