@@ -30,6 +30,10 @@ Este projeto é deliberadamente modular.
 - Nunca implementar push, criação de commits remotos ou edição remota de código no ExtNest.
 - O escopo OAuth `repo` é tecnicamente read/write porque o GitHub não fornece read-only para código privado; portanto essa restrição deve ser reforçada no código.
 - Edição de código acontece fora do ExtNest, no repositório-fonte normal.
+- O Helper final é instalado por `ExtNestHelperSetup.exe`; nunca exigir PowerShell, Python, Git for Windows, edição de JSON ou Registro do usuário final.
+- Scripts em `native-host/setup/` são exclusivamente para desenvolvimento.
+- O Helper distribuído deve ser autocontido: `ExtNestHost.exe` + Git portátil + configuração OAuth empacotada.
+- A Edge Add-ons instala somente a extensão. Quando o Helper estiver ausente, a UI deve oferecer **Finalizar instalação** e nunca exibir o erro cru de Native Messaging como instrução ao usuário.
 
 ## IDs do ExtNest
 
