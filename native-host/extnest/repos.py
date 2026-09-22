@@ -1,11 +1,45 @@
-import os, re, json, shutil, subprocess, hashlib, base64
+import os
+import re
+import json
+import shutil
+import subprocess
+import hashlib
+import base64
+import urllib.parse
+
 from .paths import EXTENSIONS
 from .registry import find_by_slug, upsert_repo, get_registry, save_registry
-from .github_api import file_text
+from .github_api import file_text, repo_info
 from .oauth import github as github_oauth
 
+def normalize_repo(value):
+    value = str(value or "").strip()
+    if not value:
+        raise RuntimeError("Informe um repositório GitHub.")
+
+    if "://" in value:
+        parsed = urllib.parse.urlparse(value)
+        if parsed.hostname not in {"github.com", "www.github.com"}:
+            raise RuntimeError("A URL precisa ser de github.com.")
+        value = parsed.path.strip("/")
+
+    if value.endswith(".git"):
+        value = value[:-4]
+
+    parts = [part for part in value.split("/") if part]
+    if len(parts) != 2:
+        raise RuntimeError("Use owner/repo ou uma URL https://github.com/owner/repo.")
+
+    owner, name = parts
+    allowed = re.compile(r"^[A-Za-z0-9_.-]+$")
+    if not allowed.match(owner) or not allowed.match(name):
+        raise RuntimeError("Nome de repositório GitHub inválido.")
+
+    return f"{owner}/{name}"
+
 def sanitize_slug(repo):
-    return re.sub(r"[^a-zA-Z0-9._-]+", "-", repo.split("/")[-1]).strip("-").lower()
+    # owner--repo avoids collisions between repositories with the same name.
+    return re.sub(r"[^a-zA-Z0-9._-]+", "-", repo.replace("/", "--")).strip("-").lower()
 
 def expected_extension_id_from_key(key_b64):
     try:
@@ -18,7 +52,12 @@ def expected_extension_id_from_key(key_b64):
 
 def remote_manifest(item):
     try:
-        return json.loads(file_text(item["repo"], "manifest.json", item.get("branch") or "main"))
+        return json.loads(file_text(
+            item["repo"],
+            "manifest.json",
+            item.get("branch") or "main",
+            item.get("account_id")
+        ))
     except Exception:
         return None
 
@@ -38,17 +77,46 @@ def _version_tuple(version):
 def version_gt(a, b):
     return _version_tuple(a) > _version_tuple(b)
 
-def register_repo(repo, branch="main"):
-    manifest = json.loads(file_text(repo, "manifest.json", branch))
+def register_repo(repo, branch=None, account_id=None):
+    repo = normalize_repo(repo)
+
+    try:
+        info = repo_info(repo, account_id)
+    except Exception as error:
+        if not account_id:
+            raise RuntimeError(
+                "Não foi possível acessar esse repositório sem conta. "
+                "Se ele for privado, conecte a conta que possui acesso."
+            ) from error
+        raise
+
+    # Public repositories deliberately do not retain/use an account token.
+    effective_account_id = str(account_id) if info["private"] and account_id else None
+
+    if info["private"] and not effective_account_id:
+        raise RuntimeError("Repositório privado exige uma conta GitHub conectada.")
+
+    effective_branch = branch or info["default_branch"] or "main"
+
+    manifest = json.loads(file_text(
+        repo,
+        "manifest.json",
+        effective_branch,
+        effective_account_id
+    ))
+
     if int(manifest.get("manifest_version", 0)) < 3:
         raise RuntimeError("manifest.json não é Manifest V3.")
 
     item = {
         "slug": sanitize_slug(repo),
         "repo": repo,
-        "branch": branch,
-        "name": manifest.get("name") or sanitize_slug(repo),
-        "expected_extension_id": expected_extension_id_from_key(manifest.get("key",""))
+        "branch": effective_branch,
+        "name": manifest.get("name") or repo.split("/")[-1],
+        "private": bool(info["private"]),
+        "account_id": effective_account_id,
+        "source": "github",
+        "expected_extension_id": expected_extension_id_from_key(manifest.get("key", ""))
     }
     return upsert_repo(item)
 
@@ -58,25 +126,31 @@ def _git_exe():
         raise RuntimeError("Git não encontrado no PATH. Instale Git for Windows.")
     return exe
 
-def _auth_header():
-    token = github_oauth.access_token()
+def _auth_header(account_id):
+    token = github_oauth.access_token(account_id)
     raw = base64.b64encode(f"x-access-token:{token}".encode("utf-8")).decode("ascii")
     return f"Authorization: Basic {raw}"
 
-def run_git(args, cwd=None, check=True):
-    cmd = [_git_exe(), "-c", f"http.extraHeader={_auth_header()}", *args]
+def run_git(args, cwd=None, check=True, account_id=None):
+    cmd = [_git_exe()]
+    if account_id:
+        cmd.extend(["-c", f"http.extraHeader={_auth_header(account_id)}"])
+    cmd.extend(args)
+
     proc = subprocess.run(
-        cmd, cwd=str(cwd) if cwd else None,
-        text=True, capture_output=True, encoding="utf-8", errors="replace"
+        cmd,
+        cwd=str(cwd) if cwd else None,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace"
     )
     if check and proc.returncode != 0:
         raise RuntimeError((proc.stderr or proc.stdout or "Erro Git").strip())
     return proc
 
 def _disable_push(path):
-    # Defense in depth: the operational clone managed by ExtNest is read-only.
-    # The OAuth token technically has broader repo scope because GitHub has no
-    # private-source read-only OAuth scope.
+    # Defense in depth for every ExtNest-managed clone, public or private.
     run_git(
         ["remote", "set-url", "--push", "origin", "no_push://extnest-read-only"],
         cwd=path
@@ -100,7 +174,8 @@ def install(slug):
         "--single-branch",
         f"https://github.com/{item['repo']}.git",
         str(target)
-    ])
+    ], account_id=item.get("account_id"))
+
     _disable_push(target)
     return target
 
@@ -115,10 +190,14 @@ def update(slug):
 
     dirty = run_git(["status", "--porcelain"], cwd=target).stdout.strip()
     if dirty:
-        raise RuntimeError("Há alterações locais. Envie ou reverta antes de atualizar.")
+        raise RuntimeError("Há alterações locais. Reverta ou salve suas alterações antes de atualizar.")
 
     _disable_push(target)
-    run_git(["pull", "--ff-only", "origin", item.get("branch") or "main"], cwd=target)
+    run_git(
+        ["pull", "--ff-only", "origin", item.get("branch") or "main"],
+        cwd=target,
+        account_id=item.get("account_id")
+    )
     return target
 
 def open_folder(slug):
@@ -153,11 +232,16 @@ def status(slug, config_backup_exists=False):
     return {
         "slug": slug,
         "name": (remote or local or {}).get("name") or item.get("name") or slug,
+        "repo": item.get("repo"),
+        "private": bool(item.get("private")),
+        "account_id": item.get("account_id"),
         "local_exists": bool((EXTENSIONS / slug / "manifest.json").exists()),
         "local_path": str(EXTENSIONS / slug),
         "local_version": local_version,
         "remote_version": remote_version,
         "expected_extension_id": expected_id,
-        "update_available": bool(local_version and remote_version and version_gt(remote_version, local_version)),
+        "update_available": bool(
+            local_version and remote_version and version_gt(remote_version, local_version)
+        ),
         "config_backup": bool(config_backup_exists)
     }

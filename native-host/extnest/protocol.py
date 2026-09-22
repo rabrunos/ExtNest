@@ -5,34 +5,49 @@ from . import repos
 from . import github_api
 from . import config_backup
 from .oauth import github, microsoft, google
+from .oauth import profiles
 from .cloud import manager as cloud
 
-HOST_VERSION = "0.2.6"
-PROTOCOL_VERSION = 2
+HOST_VERSION = "0.3.0"
+PROTOCOL_VERSION = 3
 
 def _auth_state():
+    github_accounts = github.list_accounts()
     return {
-        "github": github.connected_profile(),
-        "microsoft": microsoft.connected_profile(),
-        "google": google.connected_profile()
+        "github_accounts": github_accounts,
+        # Compatibility during the v0.2 -> v0.3 UI transition.
+        "github": github_accounts[0] if len(github_accounts) == 1 else None,
+        "microsoft": profiles.get("microsoft"),
+        "google": profiles.get("google")
     }
 
 def dispatch(request):
     op = request.get("op")
 
     if op == "ping":
-        return {"ok": True, "name": "ExtNest Native Host", "version": HOST_VERSION, "protocol_version": PROTOCOL_VERSION}
+        return {
+            "ok": True,
+            "name": "ExtNest Native Host",
+            "version": HOST_VERSION,
+            "protocol_version": PROTOCOL_VERSION
+        }
 
     if op == "state_get":
         settings = get_settings()
         return {
             "ok": True,
-            "host": {"version": HOST_VERSION, "protocol_version": PROTOCOL_VERSION},
+            "host": {
+                "version": HOST_VERSION,
+                "protocol_version": PROTOCOL_VERSION
+            },
             "registry": list_extensions(),
             "auth": _auth_state(),
             "cloud": {"primary": settings.get("primary_cloud") or ""},
             "settings": settings,
-            "paths": {"extensions": str(EXTENSIONS), "data": str(DATA)}
+            "paths": {
+                "extensions": str(EXTENSIONS),
+                "data": str(DATA)
+            }
         }
 
     if op == "oauth_github_prepare":
@@ -40,6 +55,10 @@ def dispatch(request):
 
     if op == "oauth_github_complete":
         return {"ok": True, "profile": github.complete(request["callback_url"])}
+
+    if op == "oauth_github_disconnect":
+        github.disconnect(request.get("account_id"))
+        return {"ok": True}
 
     if op == "oauth_interactive_login":
         provider = request.get("provider")
@@ -53,32 +72,57 @@ def dispatch(request):
 
     if op == "oauth_disconnect":
         provider = request.get("provider")
-        handlers = {"github": github.disconnect, "microsoft": microsoft.disconnect, "google": google.disconnect}
+        handlers = {
+            "microsoft": microsoft.disconnect,
+            "google": google.disconnect
+        }
+        if provider == "github":
+            github.disconnect_all()
+            return {"ok": True}
         if provider not in handlers:
             raise RuntimeError("Provedor inválido.")
         handlers[provider]()
         return {"ok": True}
 
     if op == "github_list_repos":
-        return {"ok": True, "repos": github_api.list_repos()}
+        return {
+            "ok": True,
+            "repos": github_api.list_repos(request.get("account_id"))
+        }
 
     if op == "repo_register":
-        item = repos.register_repo(request["repo"], request.get("branch") or "main")
+        item = repos.register_repo(
+            request["repo"],
+            request.get("branch"),
+            request.get("account_id")
+        )
         if cloud.primary_name():
-            try: cloud.sync_vault()
-            except Exception: pass
+            try:
+                cloud.sync_vault()
+            except Exception:
+                pass
         return {"ok": True, "item": item}
 
     if op == "repo_install":
         path = repos.install(request["slug"])
-        return {"ok": True, "path": str(path), **repos.status(request["slug"], config_backup.exists(request["slug"]))}
+        return {
+            "ok": True,
+            "path": str(path),
+            **repos.status(request["slug"], config_backup.exists(request["slug"]))
+        }
 
     if op == "repo_update":
         repos.update(request["slug"])
-        return {"ok": True, **repos.status(request["slug"], config_backup.exists(request["slug"]))}
+        return {
+            "ok": True,
+            **repos.status(request["slug"], config_backup.exists(request["slug"]))
+        }
 
     if op == "repo_status":
-        return {"ok": True, **repos.status(request["slug"], config_backup.exists(request["slug"]))}
+        return {
+            "ok": True,
+            **repos.status(request["slug"], config_backup.exists(request["slug"]))
+        }
 
     if op == "repo_check_all":
         items = []
@@ -98,8 +142,10 @@ def dispatch(request):
     if op == "registry_link_extension":
         item = link_extension(request["slug"], request["extension_id"])
         if cloud.primary_name():
-            try: cloud.sync_vault()
-            except Exception: pass
+            try:
+                cloud.sync_vault()
+            except Exception:
+                pass
         return {"ok": True, "item": item}
 
     if op == "cloud_set_primary":
@@ -120,14 +166,19 @@ def dispatch(request):
     if op == "settings_set":
         settings = update_settings(request.get("settings") or {})
         if cloud.primary_name():
-            try: cloud.sync_vault()
-            except Exception: pass
+            try:
+                cloud.sync_vault()
+            except Exception:
+                pass
         return {"ok": True, "settings": settings}
 
     if op == "config_backup":
         wrapper = config_backup.backup(
-            request["slug"], request.get("extension_id"), request.get("extension_version"),
-            request.get("reason") or "manual", request.get("payload")
+            request["slug"],
+            request.get("extension_id"),
+            request.get("extension_version"),
+            request.get("reason") or "manual",
+            request.get("payload")
         )
         return {"ok": True, "saved_at": wrapper["saved_at"]}
 
@@ -135,6 +186,10 @@ def dispatch(request):
         backup = config_backup.restore(request["slug"])
         if not backup:
             return {"ok": False, "error": "Backup de configurações não encontrado."}
-        return {"ok": True, "payload": backup.get("payload"), "saved_at": backup.get("saved_at")}
+        return {
+            "ok": True,
+            "payload": backup.get("payload"),
+            "saved_at": backup.get("saved_at")
+        }
 
     raise RuntimeError(f"Operação desconhecida: {op}")
