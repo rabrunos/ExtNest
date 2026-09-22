@@ -5,15 +5,15 @@ import { toast } from "./ui/toast.js";
 import { wireModalClose, closeModal } from "./ui/modal.js";
 import { renderExtensions } from "./views/extensions.js";
 import {
-  renderGitHub, connectGitHub, disconnectGitHub, loadRepos,
-  renderRepoList, addSelectedRepos
+  renderGitHub, connectGitHub, disconnectGitHubAccount, loadRepos,
+  renderRepoList, addSelectedRepos, addPublicRepo
 } from "./views/github.js";
 import {
   renderCloud, connectCloud, disconnectCloud, setPrimaryCloud, syncCloudNow
 } from "./views/cloud.js";
 import { renderSettings, saveSettings } from "./views/settings.js";
 
-const REQUIRED_NATIVE_PROTOCOL = 2;
+const REQUIRED_NATIVE_PROTOCOL = 3;
 
 async function installedDevelopmentExtensions() {
   const all = await chrome.management.getAll();
@@ -35,9 +35,12 @@ function updateSidebar() {
     state.helperOnline ? "online" : "offline";
   setDot("helperDot", state.helperOnline ? "good" : "bad");
 
+  const accounts = state.auth.github_accounts || [];
   document.getElementById("gitLabel").textContent =
-    state.auth.github?.login || "não conectado";
-  setDot("gitDot", state.auth.github ? "good" : "warn");
+    accounts.length
+      ? String(accounts.length) + " conta" + (accounts.length === 1 ? "" : "s")
+      : "sem conta";
+  setDot("gitDot", accounts.length ? "good" : "warn");
 
   const cloudLabel = state.cloud.primary === "microsoft"
     ? "OneDrive"
@@ -60,15 +63,23 @@ export async function refreshState() {
     const protocolVersion = Number(response.host?.protocol_version || 0);
     if (protocolVersion < REQUIRED_NATIVE_PROTOCOL) {
       throw new Error(
-        `Native Host desatualizado (protocolo ${protocolVersion || 1}; esperado ${REQUIRED_NATIVE_PROTOCOL}). ` +
-        "Atualize ou reinstale o ExtNest Native Host."
+        "Native Host desatualizado (protocolo " +
+        String(protocolVersion || 1) +
+        "; esperado " +
+        String(REQUIRED_NATIVE_PROTOCOL) +
+        "). Atualize ou reinstale o ExtNest Native Host."
       );
     }
 
     state.helperOnline = true;
     state.helperError = "";
     state.registry = response.registry || [];
-    state.auth = response.auth || { github:null, microsoft:null, google:null };
+    state.auth = response.auth || {
+      github_accounts: [],
+      github: null,
+      microsoft: null,
+      google: null
+    };
     state.cloud = response.cloud || { primary:"" };
     state.settings = response.settings || {};
     state.paths = response.paths || null;
@@ -76,7 +87,12 @@ export async function refreshState() {
     state.helperOnline = false;
     state.helperError = error?.message || "Native Host indisponível.";
     state.registry = [];
-    state.auth = { github:null, microsoft:null, google:null };
+    state.auth = {
+      github_accounts: [],
+      github: null,
+      microsoft: null,
+      google: null
+    };
     state.cloud = { primary:"" };
     state.settings = {};
     state.paths = null;
@@ -101,7 +117,7 @@ export async function refreshState() {
 
 function setView(name) {
   document.querySelectorAll(".view").forEach(view => view.classList.add("hidden"));
-  document.getElementById(`view-${name}`).classList.remove("hidden");
+  document.getElementById("view-" + name).classList.remove("hidden");
   document.querySelectorAll(".nav").forEach(button => {
     button.classList.toggle("active", button.dataset.view === name);
   });
@@ -123,21 +139,39 @@ function wire() {
   );
   document.getElementById("addRepoBtn").addEventListener("click", () => setView("github"));
 
-  document.getElementById("connectGithubBtn").addEventListener("click", () =>
+  document.getElementById("addGithubAccountBtn").addEventListener("click", () =>
     connectGitHub(refreshState).catch(error => toast(error.message))
   );
-  document.getElementById("disconnectGithubBtn").addEventListener("click", () =>
-    disconnectGitHub(refreshState).catch(error => toast(error.message))
-  );
+
+  document.getElementById("githubAccountsList").addEventListener("click", event => {
+    const button = event.target.closest(".github-account-disconnect");
+    if (!button) return;
+    disconnectGitHubAccount(button.dataset.accountId, refreshState)
+      .catch(error => toast(error.message));
+  });
+
+  document.getElementById("githubAccountSelect").addEventListener("change", event => {
+    document.getElementById("loadReposBtn").disabled = !event.target.value;
+    state.repos = [];
+    renderRepoList();
+  });
+
   document.getElementById("loadReposBtn").addEventListener("click", () =>
     loadRepos().catch(error => toast(error.message))
   );
   document.getElementById("repoSearch").addEventListener("input", renderRepoList);
+
   document.getElementById("addSelectedReposBtn").addEventListener("click", () =>
     addSelectedRepos(refreshState).then(() => {
       setView("extensions");
       toast("Repositórios adicionados.");
     }).catch(error => toast(error.message))
+  );
+
+  document.getElementById("addPublicRepoBtn").addEventListener("click", () =>
+    addPublicRepo(refreshState)
+      .then(() => setView("extensions"))
+      .catch(error => toast(error.message))
   );
 
   document.getElementById("connectMicrosoftBtn").addEventListener("click", () =>
@@ -169,6 +203,7 @@ function wire() {
     await navigator.clipboard.writeText(document.getElementById("installPath").textContent);
     toast("Caminho copiado.");
   });
+
   document.getElementById("openExtensionsPage").addEventListener("click", () =>
     chrome.tabs.create({ url:"chrome://extensions/" })
   );
