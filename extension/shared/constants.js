@@ -1,6 +1,7 @@
 export const NATIVE_HOST = "com.extnest.host";
 export const UPDATE_ALARM = "extnest-check-updates";
 export const DEFAULT_UPDATE_INTERVAL = 360;
+export const HELPER_INSTALLER_URL = "https://github.com/rabrunos/ExtNest/releases/latest/download/ExtNestHelperSetup.exe";
 
 export const VIEWS = {
   extensions: {
