@@ -27,6 +27,7 @@
       <div><span class="dot" id="cloudDot"></span> Nuvem <b id="cloudLabel">—</b></div>
     </div>
     <div class="side-version">ExtNest <b id="appVersion">v—</b></div>
+    <button class="side-dev-update hidden" id="devUpdateBtn" title="Atualizar o checkout local do ExtNest pela branch main">Atualizar ExtNest</button>
   </aside>
 
   <main>
@@ -75,7 +76,7 @@
         <div class="panel-head">
           <div>
             <h2>Repositórios das contas</h2>
-            <p class="muted">Selecione uma conta para listar repositórios privados e públicos que ela consegue acessar.</p>
+            <p class="muted">Mostra somente repositórios compatíveis que possuem <code>.extnest.json</code> válido na raiz.</p>
           </div>
           <div class="github-toolbar">
             <select id="githubAccountSelect">
@@ -101,7 +102,7 @@
           <input id="publicRepoBranch" placeholder="branch opcional">
           <button class="primary" id="addPublicRepoBtn">Adicionar</button>
         </div>
-        <p class="hint">O ExtNest valida o repositório e exige um manifest.json Manifest V3 na raiz.</p>
+        <p class="hint">O ExtNest exige <code>.extnest.json</code> válido e <code>manifest.json</code> Manifest V3 na raiz.</p>
       </div>
     </section>
 
