@@ -3,7 +3,7 @@
   "github": {
     "type": "github_app",
     "client_id": "Iv23liGji2rZOiSvippM",
-    "app_slug": "SET_GITHUB_APP_SLUG"
+    "app_slug": "extnest"
   },
   "microsoft": {
     "client_id": "SET_MICROSOFT_ENTRA_CLIENT_ID",
