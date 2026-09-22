@@ -57,15 +57,13 @@
       <div class="panel">
         <h2>GitHub</h2>
         <p class="muted">Conecte sua conta uma vez. O ExtNest usa o GitHub somente para leitura e download.</p>
-
         <div id="githubDisconnected">
           <button class="primary provider-connect" id="connectGithubBtn">
             <span class="provider-logo">GH</span>
             <span>Conectar com GitHub</span>
           </button>
-          <p class="hint">OAuth Device Flow. Não é necessário instalar um GitHub App nem copiar token.</p>
+          <p class="hint">OAuth com PKCE e retorno automático. Não é necessário copiar código nem instalar GitHub App.</p>
         </div>
-
         <div id="githubConnected" class="hidden">
           <div class="account-row">
             <div class="avatar-placeholder" id="githubAvatar"></div>
@@ -163,13 +161,11 @@
         </select>
         <p class="hint">O ExtNest apenas notifica. Atualizar continua sendo uma ação sua.</p>
       </div>
-
       <div class="panel">
         <h2>Configurações das extensões</h2>
         <label class="toggle-row"><input id="autoConfigBackup" type="checkbox" checked><span>Backup automático quando uma extensão compatível mudar suas configurações</span></label>
         <label class="toggle-row"><input id="askRestore" type="checkbox" checked><span>Perguntar sobre restauração quando houver backup</span></label>
       </div>
-
       <div class="panel">
         <h2>Diretórios locais</h2>
         <div class="kv"><span>Extensões</span><code id="extensionsPath">—</code></div>
@@ -180,7 +176,6 @@
 </div>
 
 <div class="modal-backdrop hidden" id="modalBackdrop"></div>
-
 <div class="modal hidden" id="installModal">
   <div class="modal-head"><h2>Carregar no navegador</h2><button data-close="installModal">×</button></div>
   <div class="modal-body">
@@ -196,18 +191,6 @@
   <div class="modal-foot">
     <button class="secondary" id="openExtensionsPage">Abrir extensões</button>
     <button class="primary" data-close="installModal">Entendi</button>
-  </div>
-</div>
-
-<div class="modal hidden" id="deviceModal">
-  <div class="modal-head"><h2>Conectar GitHub</h2><button data-close="deviceModal">×</button></div>
-  <div class="modal-body">
-    <p>Autorize o ExtNest na página oficial do GitHub.</p>
-    <div class="oauth-code-block">
-      <span>Código</span><strong id="deviceCode">—</strong>
-      <button class="secondary" id="copyDeviceCode">Copiar</button>
-    </div>
-    <p class="hint" id="deviceHint">A página será aberta automaticamente.</p>
   </div>
 </div>
 
