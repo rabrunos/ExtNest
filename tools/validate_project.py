@@ -26,15 +26,13 @@ try:
     if ping.get("protocol_version") != 2:
         errors.append("Native Host não anuncia o protocolo v2.")
 
-    protocol.github.begin = lambda: {
-        "user_code": "TEST",
-        "verification_uri": "https://example.invalid",
-        "expires_in": 900,
-        "interval": 5
-    }
-    github_begin = protocol.dispatch({"op": "oauth_github_begin"})
-    if not github_begin.get("ok"):
-        errors.append("Rota oauth_github_begin indisponível.")
+    protocol.github.login = lambda: {"login": "test", "name": "Test"}
+    github_login = protocol.dispatch({
+        "op": "oauth_interactive_login",
+        "provider": "github"
+    })
+    if not github_login.get("ok"):
+        errors.append("Rota OAuth GitHub interativa indisponível.")
 
     protocol.microsoft.login = lambda: {"name": "Test"}
     microsoft_login = protocol.dispatch({
