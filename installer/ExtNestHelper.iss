@@ -26,6 +26,7 @@ RestartApplications=no
 Source: "..\build\helper\ExtNestHost.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\helper\oauth-clients.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\helper\oauth-private.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\build\helper\com.extnest.host.template.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\helper\git\*"; DestDir: "{app}\git"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Registry]
@@ -44,24 +45,25 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
+  TemplatePath: String;
   ManifestPath: String;
   HostPath: String;
-  Json: String;
+  Json: AnsiString;
 begin
   if CurStep = ssPostInstall then
   begin
+    TemplatePath := ExpandConstant('{app}\com.extnest.host.template.json');
     ManifestPath := ExpandConstant('{app}\com.extnest.host.json');
     HostPath := ExpandConstant('{app}\ExtNestHost.exe');
 
-    Json := '{' +
-      '"name":"com.extnest.host",' +
-      '"description":"ExtNest Native Messaging Host",' +
-      '"path":"' + JsonEscape(HostPath) + '",' +
-      '"type":"stdio",' +
-      '"allowed_origins":["chrome-extension://econfanmnmmcggpgdflcipmdlmkcbiag/"]' +
-      '}';
+    if not LoadStringFromFile(TemplatePath, Json) then
+      RaiseException('Falha ao ler o template do Native Host.');
+
+    StringChangeEx(Json, '__EXTNEST_HOST_PATH__', JsonEscape(HostPath), True);
 
     if not SaveStringToFile(ManifestPath, Json, False) then
       RaiseException('Falha ao criar o manifest do ExtNest Native Host.');
+
+    DeleteFile(TemplatePath);
   end;
 end;
