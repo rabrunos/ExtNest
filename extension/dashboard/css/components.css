@@ -28,3 +28,7 @@ button.primary{background:var(--accent);color:var(--accentText)}button.secondary
 .public-repo-form input{width:100%}
 button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:760px){.public-repo-form{grid-template-columns:1fr}.github-toolbar{align-items:stretch}.github-toolbar select,.github-toolbar button{width:100%}}
+
+.helper-setup{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px}
+.helper-setup-copy{display:grid;gap:2px}.helper-setup-copy span{font-size:11px;color:var(--muted)}
+@media(max-width:680px){.helper-setup{grid-template-columns:1fr}.helper-setup button{width:100%}}
