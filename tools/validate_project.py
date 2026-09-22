@@ -184,10 +184,14 @@ for required in [
 
 if "HELPER_INSTALLER_URL" not in constants_js:
     errors.append("URL do instalador do Helper não está definida.")
+if 'MIN_HELPER_VERSION = "0.5.1"' not in constants_js:
+    errors.append("Versão mínima do Helper não está declarada corretamente.")
 if "dev_self_update" not in main_js:
     errors.append("Dashboard não contém auto-update DEV.")
-if "versionLt(helperVersion, appVersion)" not in main_js:
-    errors.append("Dashboard não valida versão mínima do Helper.")
+if "versionLt(helperVersion, MIN_HELPER_VERSION)" not in main_js:
+    errors.append("Dashboard não valida MIN_HELPER_VERSION.")
+if "versionLt(helperVersion, appVersion)" in main_js:
+    errors.append("Dashboard voltou a acoplar versão do Helper à versão do ExtNest.")
 if int(manifest.get("manifest_version",0)) != 3:
     errors.append("Manifest não é V3.")
 if "identity" not in manifest.get("permissions", []):
