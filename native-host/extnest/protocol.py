@@ -7,7 +7,7 @@ from . import config_backup
 from .oauth import github, microsoft, google
 from .cloud import manager as cloud
 
-HOST_VERSION = "0.2.3"
+HOST_VERSION = "0.2.4"
 PROTOCOL_VERSION = 2
 
 def _auth_state():
@@ -21,36 +21,29 @@ def dispatch(request):
     op = request.get("op")
 
     if op == "ping":
-        return {
-            "ok": True,
-            "name": "ExtNest Native Host",
-            "version": HOST_VERSION,
-            "protocol_version": PROTOCOL_VERSION
-        }
+        return {"ok": True, "name": "ExtNest Native Host", "version": HOST_VERSION, "protocol_version": PROTOCOL_VERSION}
 
     if op == "state_get":
         settings = get_settings()
         return {
             "ok": True,
-            "host": {
-                "version": HOST_VERSION,
-                "protocol_version": PROTOCOL_VERSION
-            },
+            "host": {"version": HOST_VERSION, "protocol_version": PROTOCOL_VERSION},
             "registry": list_extensions(),
             "auth": _auth_state(),
             "cloud": {"primary": settings.get("primary_cloud") or ""},
             "settings": settings,
-            "paths": {
-                "extensions": str(EXTENSIONS),
-                "data": str(DATA)
-            }
+            "paths": {"extensions": str(EXTENSIONS), "data": str(DATA)}
         }
+
+    if op == "oauth_github_begin":
+        return {"ok": True, **github.begin()}
+
+    if op == "oauth_github_poll":
+        return {"ok": True, **github.poll()}
 
     if op == "oauth_interactive_login":
         provider = request.get("provider")
-        if provider == "github":
-            profile = github.login()
-        elif provider == "microsoft":
+        if provider == "microsoft":
             profile = microsoft.login()
         elif provider == "google":
             profile = google.login()
@@ -60,11 +53,7 @@ def dispatch(request):
 
     if op == "oauth_disconnect":
         provider = request.get("provider")
-        handlers = {
-            "github": github.disconnect,
-            "microsoft": microsoft.disconnect,
-            "google": google.disconnect
-        }
+        handlers = {"github": github.disconnect, "microsoft": microsoft.disconnect, "google": google.disconnect}
         if provider not in handlers:
             raise RuntimeError("Provedor inválido.")
         handlers[provider]()
@@ -76,10 +65,8 @@ def dispatch(request):
     if op == "repo_register":
         item = repos.register_repo(request["repo"], request.get("branch") or "main")
         if cloud.primary_name():
-            try:
-                cloud.sync_vault()
-            except Exception:
-                pass
+            try: cloud.sync_vault()
+            except Exception: pass
         return {"ok": True, "item": item}
 
     if op == "repo_install":
@@ -111,10 +98,8 @@ def dispatch(request):
     if op == "registry_link_extension":
         item = link_extension(request["slug"], request["extension_id"])
         if cloud.primary_name():
-            try:
-                cloud.sync_vault()
-            except Exception:
-                pass
+            try: cloud.sync_vault()
+            except Exception: pass
         return {"ok": True, "item": item}
 
     if op == "cloud_set_primary":
@@ -130,16 +115,13 @@ def dispatch(request):
         return {"ok": True}
 
     if op == "cloud_pull_registry":
-        result = cloud.pull_registry()
-        return {"ok": True, "registry": result}
+        return {"ok": True, "registry": cloud.pull_registry()}
 
     if op == "settings_set":
         settings = update_settings(request.get("settings") or {})
         if cloud.primary_name():
-            try:
-                cloud.sync_vault()
-            except Exception:
-                pass
+            try: cloud.sync_vault()
+            except Exception: pass
         return {"ok": True, "settings": settings}
 
     if op == "config_backup":
