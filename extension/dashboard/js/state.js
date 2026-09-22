@@ -1,6 +1,7 @@
 export const state = {
   helperOnline: false,
   helperError: "",
+  helperVersion: "",
   registry: [],
   installed: [],
   auth: {
