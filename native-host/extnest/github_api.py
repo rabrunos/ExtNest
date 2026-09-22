@@ -2,7 +2,7 @@ import base64
 import urllib.parse
 
 from .oauth import github as github_oauth
-from .http import api_json, json_request, request
+from .http import api_json, json_request
 
 API = "https://api.github.com"
 
@@ -84,10 +84,11 @@ def file_text(repo, path, branch="main", account_id=None):
 
         return base64.b64decode(obj["content"]).decode("utf-8")
 
-    qrepo = "/".join(urllib.parse.quote(part, safe="") for part in repo.split("/", 1))
-    qbranch = urllib.parse.quote(branch, safe="")
     qpath = urllib.parse.quote(path, safe="/")
-    url = f"https://raw.githubusercontent.com/{qrepo}/{qbranch}/{qpath}"
+    qbranch = urllib.parse.quote(branch, safe="")
+    obj = _public_get(f"/repos/{repo}/contents/{qpath}?ref={qbranch}")
 
-    with request(url, headers={"User-Agent": "ExtNest/0.3"}) as response:
-        return response.read().decode("utf-8")
+    if not obj or obj.get("encoding") != "base64":
+        raise RuntimeError(f"GitHub não retornou {path} em base64.")
+
+    return base64.b64decode(obj["content"]).decode("utf-8")
