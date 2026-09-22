@@ -7,7 +7,7 @@ from . import config_backup
 from .oauth import github, microsoft, google
 from .cloud import manager as cloud
 
-HOST_VERSION = "0.2.4"
+HOST_VERSION = "0.2.5"
 PROTOCOL_VERSION = 2
 
 def _auth_state():
@@ -35,15 +35,11 @@ def dispatch(request):
             "paths": {"extensions": str(EXTENSIONS), "data": str(DATA)}
         }
 
-    if op == "oauth_github_begin":
-        return {"ok": True, **github.begin()}
-
-    if op == "oauth_github_poll":
-        return {"ok": True, **github.poll()}
-
     if op == "oauth_interactive_login":
         provider = request.get("provider")
-        if provider == "microsoft":
+        if provider == "github":
+            profile = github.login()
+        elif provider == "microsoft":
             profile = microsoft.login()
         elif provider == "google":
             profile = google.login()
