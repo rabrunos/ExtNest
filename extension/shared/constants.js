@@ -1,8 +1,10 @@
 export const NATIVE_HOST = "com.extnest.host";
 export const UPDATE_ALARM = "extnest-check-updates";
 export const DEFAULT_UPDATE_INTERVAL = 360;
-export const HELPER_INSTALLER_URL = "https://github.com/rabrunos/ExtNest/releases/latest/download/ExtNestHelperSetup.exe";
-export const HELPER_RELEASE_API = "https://api.github.com/repos/rabrunos/ExtNest/releases/latest";
+export const MIN_HELPER_VERSION = "0.5.1";
+export const HELPER_RELEASE_TAG = "helper-v0.5.1";
+export const HELPER_INSTALLER_URL = "https://github.com/rabrunos/ExtNest/releases/download/helper-v0.5.1/ExtNestHelperSetup.exe";
+export const HELPER_RELEASE_API = "https://api.github.com/repos/rabrunos/ExtNest/releases/tags/helper-v0.5.1";
 export const HELPER_ASSET_NAME = "ExtNestHelperSetup.exe";
 
 export const VIEWS = {
