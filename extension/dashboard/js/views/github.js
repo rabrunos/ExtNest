@@ -8,33 +8,64 @@ function esc(v = "") {
   }[c]));
 }
 
-export function renderGitHub() {
-  const connected = !!state.auth.github;
-  document.getElementById("githubDisconnected").classList.toggle("hidden", connected);
-  document.getElementById("githubConnected").classList.toggle("hidden", !connected);
-
-  if (connected) {
-    const profile = state.auth.github;
-    document.getElementById("githubUser").textContent =
-      profile.name || profile.login || "GitHub";
-    document.getElementById("githubAccountDetail").textContent =
-      profile.login ? `@${profile.login}` : "";
-    document.getElementById("githubAvatar").textContent =
-      (profile.login || "G").slice(0, 1).toUpperCase();
-  }
-}
-
-export async function connectGitHub(refreshAll) {
+function identityApi() {
   const identity = globalThis.chrome?.identity ?? globalThis.browser?.identity;
-
   if (!identity?.getRedirectURL || !identity?.launchWebAuthFlow) {
     throw new Error(
       "API de identidade do navegador ainda não está carregada. " +
       "Recarregue o ExtNest em edge://extensions e abra o painel novamente."
     );
   }
+  return identity;
+}
 
+export function renderGitHub() {
+  const accounts = state.auth.github_accounts || [];
+  const list = document.getElementById("githubAccountsList");
+  const select = document.getElementById("githubAccountSelect");
+  const previous = select.value;
+
+  list.innerHTML = "";
+  select.innerHTML = '<option value="">Selecione uma conta...</option>';
+
+  if (!accounts.length) {
+    list.innerHTML = '<div class="hint">Nenhuma conta GitHub conectada.</div>';
+  }
+
+  for (const account of accounts) {
+    const row = document.createElement("div");
+    row.className = "account-row";
+    row.innerHTML =
+      '<div class="avatar-placeholder">' +
+      esc((account.login || "G").slice(0, 1).toUpperCase()) +
+      '</div><div><strong>' +
+      esc(account.name || account.login || "GitHub") +
+      '</strong><span>' +
+      (account.login ? "@" + esc(account.login) : "") +
+      '</span></div><button class="secondary danger github-account-disconnect" data-account-id="' +
+      esc(account.account_id) +
+      '">Desconectar</button>';
+    list.appendChild(row);
+
+    const option = document.createElement("option");
+    option.value = account.account_id;
+    option.textContent = account.login ? "@" + account.login : account.account_id;
+    select.appendChild(option);
+  }
+
+  if (accounts.some(account => account.account_id === previous)) {
+    select.value = previous;
+  } else if (accounts.length === 1) {
+    select.value = accounts[0].account_id;
+  }
+
+  document.getElementById("loadReposBtn").disabled = !select.value;
+}
+
+export async function connectGitHub(refreshAll) {
+  const identity = identityApi();
   const redirectUri = identity.getRedirectURL("github");
+
   const prepared = await nativeOk("oauth_github_prepare", {
     redirect_uri: redirectUri
   });
@@ -52,22 +83,43 @@ export async function connectGitHub(refreshAll) {
     callback_url: callbackUrl
   });
 
-  toast(`GitHub conectado como @${response.profile?.login || "usuário"}.`);
+  toast("Conta @" + (response.profile?.login || "GitHub") + " adicionada.");
   await refreshAll();
 }
 
-export async function disconnectGitHub(refreshAll) {
-  await nativeOk("oauth_disconnect", { provider:"github" });
+export async function disconnectGitHubAccount(accountId, refreshAll) {
+  const used = state.registry.filter(
+    item => String(item.account_id || "") === String(accountId)
+  );
+
+  if (used.length) {
+    const names = used.slice(0, 3).map(item => item.name || item.repo).join(", ");
+    const extra = used.length > 3 ? " e mais " + (used.length - 3) : "";
+    const message =
+      "Essa conta é usada por " + used.length + " extensão(ões): " +
+      names + extra +
+      ". Elas continuarão cadastradas, mas repositórios privados não poderão atualizar até a conta ser conectada novamente. Desconectar?";
+    if (!confirm(message)) return;
+  }
+
+  await nativeOk("oauth_github_disconnect", { account_id: accountId });
   state.repos = [];
   document.getElementById("repoList").innerHTML = "";
   await refreshAll();
 }
 
 export async function loadRepos() {
-  if (!state.auth.github) throw new Error("Conecte o GitHub primeiro.");
+  const accountId = document.getElementById("githubAccountSelect").value;
+  if (!accountId) throw new Error("Selecione uma conta GitHub.");
 
-  const response = await nativeOk("github_list_repos");
-  state.repos = response.repos || [];
+  const response = await nativeOk("github_list_repos", {
+    account_id: accountId
+  });
+
+  state.repos = (response.repos || []).map(repo => ({
+    ...repo,
+    account_id: accountId
+  }));
   renderRepoList();
 }
 
@@ -82,23 +134,25 @@ export function renderRepoList() {
   );
 
   if (!visible.length) {
-    wrap.innerHTML = '<div class="hint">Nenhum repositório encontrado.</div>';
+    wrap.innerHTML = '<div class="hint">Nenhum repositório carregado.</div>';
     return;
   }
 
   for (const repo of visible) {
     const already = managed.has(repo.full_name.toLowerCase());
     const row = document.createElement("label");
-    row.className = "repo-row" + (repo.private ? " private" : "");
+    row.className = "repo-row" + (repo.private ? " private" : " public");
 
-    row.innerHTML = `
-      <input type="checkbox" data-repo="${esc(repo.full_name)}" ${already ? "disabled" : ""}>
-      <div class="grow">
-        <strong>${esc(repo.full_name)}</strong>
-        <span>${esc(repo.description || "Sem descrição")} · ${esc(repo.default_branch || "main")}</span>
-      </div>
-      ${already ? '<span class="badge good">Adicionado</span>' : ""}
-    `;
+    row.innerHTML =
+      '<input type="checkbox" data-repo="' + esc(repo.full_name) + '"' +
+      (already ? " disabled" : "") +
+      '><div class="grow"><strong>' + esc(repo.full_name) + '</strong><span>' +
+      esc(repo.description || "Sem descrição") + " · " +
+      esc(repo.default_branch || "main") +
+      '</span></div><span class="badge">' +
+      (repo.private ? "Privado" : "Público") +
+      '</span>' +
+      (already ? '<span class="badge good">Adicionado</span>' : "");
 
     wrap.appendChild(row);
   }
@@ -116,9 +170,32 @@ export async function addSelectedRepos(refreshAll) {
     const repo = byName.get(fullName);
     await nativeOk("repo_register", {
       repo: fullName,
-      branch: repo?.default_branch || "main"
+      branch: repo?.default_branch || null,
+      account_id: repo?.private ? repo.account_id : null
     });
   }
 
+  await refreshAll();
+}
+
+export async function addPublicRepo(refreshAll) {
+  const input = document.getElementById("publicRepoInput");
+  const branchInput = document.getElementById("publicRepoBranch");
+  const repo = input.value.trim();
+  const branch = branchInput.value.trim() || null;
+
+  if (!repo) {
+    throw new Error("Informe owner/repo ou a URL do repositório público.");
+  }
+
+  const response = await nativeOk("repo_register", {
+    repo,
+    branch,
+    account_id: null
+  });
+
+  input.value = "";
+  branchInput.value = "";
+  toast((response.item?.name || response.item?.repo || "Repositório") + " adicionado sem login.");
   await refreshAll();
 }
