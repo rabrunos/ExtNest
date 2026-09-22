@@ -6,7 +6,7 @@ import { wireModalClose, closeModal } from "./ui/modal.js";
 import { renderExtensions } from "./views/extensions.js";
 import {
   renderGitHub, connectGitHub, disconnectGitHub, loadRepos,
-  renderRepoList, addSelectedRepos, cancelGitHubPolling
+  renderRepoList, addSelectedRepos
 } from "./views/github.js";
 import {
   renderCloud, connectCloud, disconnectCloud, setPrimaryCloud, syncCloudNow
@@ -173,15 +173,8 @@ function wire() {
     chrome.tabs.create({ url:"chrome://extensions/" })
   );
 
-  document.getElementById("copyDeviceCode").addEventListener("click", async () => {
-    await navigator.clipboard.writeText(document.getElementById("deviceCode").textContent);
-    toast("Código copiado.");
-  });
-
-  document.querySelector('[data-close="deviceModal"]').addEventListener("click", cancelGitHubPolling);
   document.getElementById("modalBackdrop").addEventListener("click", () => {
-    cancelGitHubPolling();
-    for (const id of ["installModal","deviceModal","waitModal"]) closeModal(id);
+    for (const id of ["installModal","waitModal"]) closeModal(id);
   });
 }
 
