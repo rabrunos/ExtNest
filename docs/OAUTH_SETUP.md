@@ -104,3 +104,37 @@ https://<CHROME_STORE_ID>.chromiumapp.org/github
 ```
 
 O OAuth App aceita vários Redirect URIs, então o redirect de desenvolvimento pode continuar cadastrado durante os testes.
+
+
+## Native Host de desenvolvimento estável
+
+O registro de desenvolvimento não aponta mais para um `.cmd` dentro do repositório.
+
+O registrador cria:
+
+```text
+%LOCALAPPDATA%\ExtNest\NativeHostDev\launcher.exe
+%LOCALAPPDATA%\ExtNest\NativeHostDev\com.extnest.host.json
+%LOCALAPPDATA%\ExtNest\NativeHostDev\repo-path.txt
+```
+
+e registra o manifest em:
+
+```text
+HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.extnest.host
+HKCU\Software\Google\Chrome\NativeMessagingHosts\com.extnest.host
+```
+
+O script valida:
+- chave do Registro;
+- caminho do manifest;
+- caminho do launcher.exe;
+- allowed_origins;
+- presença do extnest_host.py;
+- self-test do launcher.
+
+Para registrar/migrar:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\native-host\setup\register-dev-host.ps1
+```
