@@ -1,76 +1,77 @@
+import secrets
+import urllib.parse
+
 from .tokens import save_tokens, load_tokens, clear_tokens, expires_soon
-from ..config import provider_config
-from ..paths import AUTH
-from ..jsonstore import load_json, save_json
+from .loopback import LoopbackReceiver, pkce_pair
+from ..config import provider_config, provider_secret
 from ..http import form_post, api_json
-from ..timeutil import now_ts
 from . import profiles
 
-SESSION_FILE = AUTH / "github-device.json"
+AUTH_URL = "https://github.com/login/oauth/authorize"
+TOKEN_URL = "https://github.com/login/oauth/access_token"
 
 def _config():
     return provider_config("github")
 
-def begin():
+def _client_secret():
+    return provider_secret("github")
+
+def login():
     config = _config()
-    response = form_post(
-        "https://github.com/login/device/code",
-        {
+    verifier, challenge = pkce_pair()
+    state = secrets.token_urlsafe(32)
+
+    with LoopbackReceiver(public_host="127.0.0.1") as receiver:
+        redirect_uri = receiver.redirect_uri
+
+        query = urllib.parse.urlencode({
             "client_id": config["client_id"],
-            "scope": " ".join(config.get("scopes") or ["repo", "read:user", "offline_access"])
-        },
-        headers={"Accept": "application/json"}
-    )
+            "redirect_uri": redirect_uri,
+            "scope": " ".join(config.get("scopes") or ["repo", "read:user", "offline_access"]),
+            "state": state,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+            "prompt": "select_account"
+        })
 
-    save_json(SESSION_FILE, {
-        "device_code": response["device_code"],
-        "expires_at": now_ts() + int(response.get("expires_in", 900)),
-        "interval": int(response.get("interval", 5))
-    })
+        result = receiver.open_and_wait(f"{AUTH_URL}?{query}")
 
-    return {
-        "user_code": response["user_code"],
-        "verification_uri": response["verification_uri"],
-        "expires_in": response.get("expires_in", 900),
-        "interval": response.get("interval", 5)
-    }
+    if result.get("state") != state:
+        raise RuntimeError("Estado OAuth GitHub inválido.")
 
-def poll():
-    config = _config()
-    session = load_json(SESSION_FILE, None)
+    if result.get("error"):
+        raise RuntimeError(result.get("error_description") or result["error"])
 
-    if not session:
-        raise RuntimeError("Nenhuma autenticação GitHub em andamento.")
-
-    if int(session["expires_at"]) <= now_ts():
-        SESSION_FILE.unlink(missing_ok=True)
-        return {"connected": False, "status": "expired_token"}
+    code = result.get("code")
+    if not code:
+        raise RuntimeError("GitHub não retornou authorization code.")
 
     response = form_post(
-        "https://github.com/login/oauth/access_token",
+        TOKEN_URL,
         {
             "client_id": config["client_id"],
-            "device_code": session["device_code"],
-            "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
+            "client_secret": _client_secret(),
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "code_verifier": verifier
         },
         headers={"Accept": "application/json"}
     )
 
     if response.get("error"):
-        return {"connected": False, "status": response["error"]}
+        raise RuntimeError(response.get("error_description") or response["error"])
 
     save_tokens("github", response)
-    SESSION_FILE.unlink(missing_ok=True)
-    current = profiles.set("github", profile())
-
-    return {"connected": True, "profile": current}
+    return profiles.set("github", profile())
 
 def _refresh(tokens):
     config = _config()
+
     response = form_post(
-        "https://github.com/login/oauth/access_token",
+        TOKEN_URL,
         {
             "client_id": config["client_id"],
+            "client_secret": _client_secret(),
             "grant_type": "refresh_token",
             "refresh_token": tokens["refresh_token"]
         },
@@ -79,6 +80,9 @@ def _refresh(tokens):
 
     if response.get("error"):
         raise RuntimeError(response.get("error_description") or response["error"])
+
+    if "refresh_token" not in response and tokens.get("refresh_token"):
+        response["refresh_token"] = tokens["refresh_token"]
 
     return save_tokens("github", response)
 
@@ -104,6 +108,7 @@ def profile():
             "User-Agent": "ExtNest/0.2"
         }
     )
+
     return {
         "login": user.get("login"),
         "name": user.get("name"),
@@ -113,6 +118,7 @@ def profile():
 def connected_profile():
     if not load_tokens("github"):
         return None
+
     try:
         return profiles.set("github", profile())
     except Exception:
@@ -121,4 +127,3 @@ def connected_profile():
 def disconnect():
     clear_tokens("github")
     profiles.clear("github")
-    SESSION_FILE.unlink(missing_ok=True)
