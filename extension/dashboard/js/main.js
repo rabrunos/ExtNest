@@ -1,4 +1,4 @@
-import { VIEWS } from "../../shared/constants.js";
+import { VIEWS, HELPER_INSTALLER_URL } from "../../shared/constants.js";
 import { nativeMessage } from "./api/native.js";
 import { state } from "./state.js";
 import { toast } from "./ui/toast.js";
@@ -103,13 +103,18 @@ export async function refreshState() {
 
   const helperBanner = document.getElementById("helperBanner");
   helperBanner.classList.toggle("hidden", state.helperOnline);
-  document.getElementById("helperBannerTitle").textContent =
-    state.helperError.includes("desatualizado")
-      ? "Native Host desatualizado."
-      : "Native Host não encontrado.";
-  document.getElementById("helperBannerMessage").textContent =
-    state.helperError ||
-    "O ExtNest precisa do helper local para Git e arquivos no AppData.";
+
+  if (!state.helperOnline) {
+    const outdated = state.helperError.includes("desatualizado");
+    document.getElementById("helperBannerTitle").textContent =
+      outdated ? "Atualize o componente local do ExtNest" : "Finalize a instalação do ExtNest";
+    document.getElementById("helperBannerMessage").textContent =
+      outdated
+        ? "Instale a versão mais recente do componente local para continuar."
+        : "Instale o componente local uma única vez. Não é necessário configurar pastas, Registro ou PowerShell.";
+    document.getElementById("installHelperBtn").textContent =
+      outdated ? "Atualizar componente" : "Finalizar instalação";
+  }
 
   updateSidebar();
   await renderExtensions(refreshState);
@@ -140,6 +145,67 @@ function wire() {
   document.getElementById("refreshBtn").addEventListener("click", () =>
     refreshState().then(() => toast("Atualizado."))
   );
+
+  document.getElementById("installHelperBtn").addEventListener("click", async () => {
+    const button = document.getElementById("installHelperBtn");
+    button.disabled = true;
+    const previous = button.textContent;
+    button.textContent = "Baixando...";
+
+    try {
+      const downloadId = await new Promise((resolve, reject) => {
+        chrome.downloads.download({
+          url: HELPER_INSTALLER_URL,
+          filename: "ExtNest/ExtNestHelperSetup.exe",
+          saveAs: false
+        }, id => {
+          const error = chrome.runtime.lastError;
+          if (error || id == null) reject(new Error(error?.message || "Falha ao baixar o instalador."));
+          else resolve(id);
+        });
+      });
+
+      await new Promise((resolve, reject) => {
+        const listener = delta => {
+          if (delta.id !== downloadId || !delta.state) return;
+          if (delta.state.current === "complete") {
+            chrome.downloads.onChanged.removeListener(listener);
+            resolve();
+          } else if (delta.state.current === "interrupted") {
+            chrome.downloads.onChanged.removeListener(listener);
+            reject(new Error("O download do componente local foi interrompido."));
+          }
+        };
+        chrome.downloads.onChanged.addListener(listener);
+      });
+
+      try {
+        await chrome.downloads.open(downloadId);
+      } catch {
+        chrome.downloads.show(downloadId);
+      }
+
+      button.textContent = "Aguardando instalação...";
+      toast("Conclua o instalador do ExtNest. O painel detectará automaticamente quando terminar.");
+
+      const deadline = Date.now() + 120000;
+      while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await refreshState();
+        if (state.helperOnline) {
+          toast("Componente local instalado.");
+          return;
+        }
+      }
+
+      button.textContent = "Verificar novamente";
+    } catch (error) {
+      button.textContent = previous;
+      toast(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
   document.getElementById("addRepoBtn").addEventListener("click", () => setView("github"));
 
   document.getElementById("addGithubAccountBtn").addEventListener("click", () =>
