@@ -42,9 +42,12 @@
     </header>
 
     <section class="view" id="view-extensions">
-      <div class="banner hidden" id="helperBanner">
-        <strong id="helperBannerTitle">Native Host não encontrado.</strong>
-        <span id="helperBannerMessage">O ExtNest precisa do helper local para Git e arquivos no AppData.</span>
+      <div class="banner helper-setup hidden" id="helperBanner">
+        <div class="helper-setup-copy">
+          <strong id="helperBannerTitle">Finalize a instalação do ExtNest</strong>
+          <span id="helperBannerMessage">Instale o componente local uma única vez para gerenciar extensões no Windows.</span>
+        </div>
+        <button class="primary" id="installHelperBtn">Finalizar instalação</button>
       </div>
       <div id="extensionCards" class="cards"></div>
       <div class="section-title">
