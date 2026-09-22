@@ -1,102 +1,102 @@
 # OAuth — configuração única do projeto
 
-## 1. GitHub
+## GitHub — OAuth App + PKCE
 
-O ExtNest usa um **OAuth App** porque queremos:
+OAuth App atual:
 
 ```text
-Conectar
-→ autorizar
-→ pronto
+Client ID:
+Ov23liTysBeDh3EtPQrb
 ```
 
-Sem instalar um GitHub App na conta.
+### Configuração no GitHub
 
-### Criar
-
-GitHub:
+Abra:
 
 ```text
 Settings
 → Developer settings
 → OAuth Apps
-→ New OAuth App
+→ ExtNest
 ```
 
-Preencha:
+Configure:
 
 ```text
-Application name:
-ExtNest
-
 Homepage URL:
 https://github.com/rabrunos/ExtNest
 
-Application description:
-Gerenciador privado de extensões que usa o GitHub como fonte de código.
+Redirect URI:
+http://127.0.0.1
 
-Authorization callback URL:
-http://localhost
+Allow wildcard matching:
+DESATIVADO
+
+Enable Device Flow:
+DESATIVADO
+
+Expire user access tokens:
+ATIVADO
 ```
 
-Ative:
+O ExtNest usa Authorization Code + PKCE com callback de loopback em porta aleatória.
+
+Exemplo:
 
 ```text
-Enable Device Flow
-Expire user access tokens
+Callback cadastrado:
+http://127.0.0.1
+
+Callback durante o login:
+http://127.0.0.1:53142
 ```
 
-Depois clique em:
+### Client Secret para desenvolvimento
+
+Na página do OAuth App:
 
 ```text
-Register application
+Client secrets
+→ Generate a new client secret
 ```
 
-Client ID configurado no projeto:
+Não envie esse valor para o GitHub do ExtNest.
+
+No PC de desenvolvimento, rode:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\native-host\setup\set-dev-github-secret.ps1
+```
+
+Cole o Client Secret quando solicitado.
+
+O script cria:
 
 ```text
-Ov23liTysBeDh3EtPQrb
+native-host/oauth-private.json
 ```
 
-Não é necessário distribuir `Client secret` no ExtNest.
-
-### Scopes pedidos pelo aplicativo
-
-O ExtNest solicitará:
-
-```text
-repo
-read:user
-offline_access
-```
-
-### Atenção
-
-O GitHub não oferece escopo OAuth de código privado somente leitura.
-
-Para ler conteúdo privado, `repo` é necessário e tecnicamente concede read/write.
-
-Mesmo assim, o ExtNest implementa exclusivamente operações de leitura/download e não possui push.
+Esse arquivo é ignorado pelo Git.
 
 ### Teste
 
-1. Coloque o Client ID em `native-host/oauth-clients.json`.
-2. Atualize/reinicie o Native Host.
-3. Recarregue a extensão.
-4. Clique **Conectar com GitHub**.
-5. Autorize o código no GitHub.
-6. Clique **Carregar repositórios**.
-7. Repositórios públicos e privados acessíveis pela conta devem aparecer.
-8. Não deve existir nenhuma etapa de instalação de GitHub App.
+1. `git pull`
+2. gere e salve o Client Secret local;
+3. recarregue a extensão em `edge://extensions`;
+4. clique **Conectar com GitHub**;
+5. GitHub abre;
+6. escolha/autorize a conta;
+7. GitHub retorna automaticamente ao loopback local;
+8. clique **Carregar repositórios**.
+
+Não deve existir código de Device Flow nem instalação de GitHub App.
 
 ---
 
-## 2. Microsoft / OneDrive
+## Microsoft / OneDrive
 
-Fazer depois que a integração GitHub estiver validada.
+Fazer depois do GitHub.
 
----
+## Google Drive
 
-## 3. Google Drive
-
-Fazer depois que a integração GitHub estiver validada.
+Fazer depois do GitHub.
