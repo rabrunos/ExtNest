@@ -19,3 +19,12 @@ button.primary{background:var(--accent);color:var(--accentText)}button.secondary
 .path-box,.oauth-code-block{display:flex;gap:8px;align-items:center;background:var(--soft);border-radius:8px;padding:8px 10px}.path-box code{flex:1;overflow-wrap:anywhere}.oauth-code-block{margin:14px 0}.oauth-code-block strong{font:700 24px/1 "Cascadia Code",Consolas,monospace;letter-spacing:.08em;flex:1}
 .oauth-wait{display:flex;align-items:center;gap:14px}.spinner{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--text);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;z-index:100;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 13px;border-radius:8px;box-shadow:0 8px 24px #0005;font-size:12px}
+
+.account-list{display:grid;gap:8px;margin-top:14px}
+.account-list .account-row{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--soft)}
+.github-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.github-toolbar select{min-width:190px}
+.public-repo-form{display:grid;grid-template-columns:minmax(0,1fr) 170px auto;gap:8px;margin-top:14px}
+.public-repo-form input{width:100%}
+button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:760px){.public-repo-form{grid-template-columns:1fr}.github-toolbar{align-items:stretch}.github-toolbar select,.github-toolbar button{width:100%}}
