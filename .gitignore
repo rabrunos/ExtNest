@@ -21,7 +21,6 @@ build/
 .env
 .env.*
 secrets/
-native-host/oauth-private.json
 
 # ExtNest runtime data must never enter the repo
 ExtNestData/
