@@ -1,49 +1,53 @@
-# GitHub Auth — OAuth App + PKCE
+# GitHub Auth — chrome.identity + OAuth App + PKCE
 
-## Experiência
-
-O login do ExtNest é:
+## UX
 
 ```text
 Conectar com GitHub
-→ navegador oficial do GitHub
-→ escolher/autorizar conta
-→ retorno automático para 127.0.0.1
-→ conectado
+→ GitHub abre em janela de autenticação
+→ usuário autoriza
+→ janela fecha automaticamente
+→ ExtNest fica conectado
 ```
 
-Não existe:
-- código de Device Flow;
-- instalação de GitHub App;
-- token manual.
+O fechamento é feito pelo próprio navegador através de `chrome.identity.launchWebAuthFlow`.
 
-## Authorization Code + PKCE
-
-O ExtNest gera:
-- `state` aleatório;
-- `code_verifier`;
-- `code_challenge` SHA-256 (`S256`);
-- servidor loopback temporário em `127.0.0.1:<porta aleatória>`.
-
-O callback cadastrado no GitHub deve ser:
+Quando o provedor redireciona para:
 
 ```text
-http://127.0.0.1
+https://<extension-id>.chromiumapp.org/github
 ```
+
+o navegador encerra a janela do fluxo e entrega a URL final de volta à extensão.
+
+## Responsabilidades
+
+### Extensão
+
+- gera a redirect URL com `chrome.identity.getRedirectURL("github")`;
+- pede ao Native Host a authorization URL;
+- executa `chrome.identity.launchWebAuthFlow`;
+- envia a URL final ao Native Host.
+
+### Native Host
+
+- gera `state`;
+- gera PKCE `code_verifier/code_challenge`;
+- guarda a sessão OAuth por no máximo 5 minutos;
+- valida redirect, state e issuer;
+- troca authorization code por tokens;
+- valida o usuário em `GET /user`;
+- salva os tokens com DPAPI.
+
+A conta só é considerada conectada depois de todo esse processo concluir.
 
 ## Client Secret
 
-Para OAuth Apps, o GitHub exige `client_secret` na troca do authorization code por token.
+GitHub OAuth Apps exigem Client Secret na troca do code por token.
 
-Por isso:
-- o secret nunca é commitado;
-- desenvolvimento usa `native-host/oauth-private.json`;
-- esse arquivo está no `.gitignore`;
-- alternativamente pode ser usado `EXTNEST_GITHUB_CLIENT_SECRET`.
+Como o ExtNest é um cliente público/nativo, o GitHub reconhece que esse segredo não pode ser mantido realmente secreto no dispositivo. PKCE deve ser usado para proteger o authorization code.
 
-Em produção sem backend, esse valor precisará estar no Native Host final e, por ser um cliente instalado no PC, deve ser considerado recuperável. O PKCE protege o authorization code contra interceptação, mas não torna um segredo embutido realmente confidencial.
-
-## Acesso aos repositórios
+## Repositórios privados
 
 Scopes:
 
@@ -53,17 +57,14 @@ read:user
 offline_access
 ```
 
-O GitHub não fornece um scope OAuth de conteúdo privado read-only.
+O GitHub não fornece um scope OAuth de conteúdo privado read-only. O token é mais amplo que a funcionalidade usada.
 
-O ExtNest reforça read-only no próprio desenho:
-- apenas GET nas APIs;
+O ExtNest restringe seu comportamento:
+- listar/GET;
 - clone/fetch/pull;
 - sem push;
-- push URL do clone operacional é deliberadamente inválida.
+- push URL bloqueado.
 
 ## Tokens
 
-Access token e refresh token:
-- ficam somente no computador;
-- são protegidos com Windows DPAPI;
-- não são enviados para infraestrutura do ExtNest.
+Tokens ficam no computador do usuário, protegidos via Windows DPAPI, e não são enviados para infraestrutura do ExtNest.

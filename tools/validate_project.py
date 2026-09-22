@@ -26,13 +26,24 @@ try:
     if ping.get("protocol_version") != 2:
         errors.append("Native Host não anuncia o protocolo v2.")
 
-    protocol.github.login = lambda: {"login": "test", "name": "Test"}
-    github_login = protocol.dispatch({
-        "op": "oauth_interactive_login",
-        "provider": "github"
+    protocol.github.prepare = lambda redirect_uri: {
+        "authorization_url": "https://example.invalid/auth",
+        "expires_in": 300
+    }
+    prepared = protocol.dispatch({
+        "op": "oauth_github_prepare",
+        "redirect_uri": "https://example.chromiumapp.org/github"
     })
-    if not github_login.get("ok"):
-        errors.append("Rota OAuth GitHub interativa indisponível.")
+    if not prepared.get("ok"):
+        errors.append("Rota oauth_github_prepare indisponível.")
+
+    protocol.github.complete = lambda callback_url: {"login": "test", "name": "Test"}
+    completed = protocol.dispatch({
+        "op": "oauth_github_complete",
+        "callback_url": "https://example.chromiumapp.org/github?code=x&state=y"
+    })
+    if not completed.get("ok"):
+        errors.append("Rota oauth_github_complete indisponível.")
 
     protocol.microsoft.login = lambda: {"name": "Test"}
     microsoft_login = protocol.dispatch({
@@ -66,6 +77,8 @@ if node:
 manifest = json.loads((ROOT/"extension/manifest.json").read_text(encoding="utf-8"))
 if int(manifest.get("manifest_version",0)) != 3:
     errors.append("Manifest não é V3.")
+if "identity" not in manifest.get("permissions", []):
+    errors.append("Manifest precisa da permissão identity para launchWebAuthFlow.")
 
 with tempfile.TemporaryDirectory() as td:
     zpath = Path(td)/"store.zip"
@@ -88,7 +101,7 @@ if errors:
 print("ExtNest: validação OK")
 print("- JSON OK")
 print("- Python OK")
-print("- Native protocol v2 / OAuth routing OK")
+print("- Native protocol v2 / GitHub OAuth routing OK")
 print("- JavaScript OK" if node else "- JavaScript: Node não instalado, check ignorado")
-print("- Manifest V3 OK")
+print("- Manifest V3 + identity OK")
 print("- Layout do Store ZIP OK")

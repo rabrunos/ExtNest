@@ -7,7 +7,7 @@ from . import config_backup
 from .oauth import github, microsoft, google
 from .cloud import manager as cloud
 
-HOST_VERSION = "0.2.5"
+HOST_VERSION = "0.2.6"
 PROTOCOL_VERSION = 2
 
 def _auth_state():
@@ -35,16 +35,20 @@ def dispatch(request):
             "paths": {"extensions": str(EXTENSIONS), "data": str(DATA)}
         }
 
+    if op == "oauth_github_prepare":
+        return {"ok": True, **github.prepare(request["redirect_uri"])}
+
+    if op == "oauth_github_complete":
+        return {"ok": True, "profile": github.complete(request["callback_url"])}
+
     if op == "oauth_interactive_login":
         provider = request.get("provider")
-        if provider == "github":
-            profile = github.login()
-        elif provider == "microsoft":
+        if provider == "microsoft":
             profile = microsoft.login()
         elif provider == "google":
             profile = google.login()
         else:
-            raise RuntimeError("Provedor OAuth inválido.")
+            raise RuntimeError("Provedor OAuth interativo inválido.")
         return {"ok": True, "profile": profile}
 
     if op == "oauth_disconnect":

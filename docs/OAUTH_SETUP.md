@@ -1,17 +1,29 @@
 # OAuth — configuração única do projeto
 
-## GitHub — OAuth App + PKCE
+## GitHub — OAuth App + PKCE + chrome.identity
 
-OAuth App atual:
+OAuth App:
 
 ```text
 Client ID:
 Ov23liTysBeDh3EtPQrb
 ```
 
-### Configuração no GitHub
+### Desenvolvimento atual
 
-Abra:
+ExtNest development ID:
+
+```text
+econfanmnmmcggpgdflcipmdlmkcbiag
+```
+
+O redirect usado por `chrome.identity.launchWebAuthFlow` é:
+
+```text
+https://econfanmnmmcggpgdflcipmdlmkcbiag.chromiumapp.org/github
+```
+
+No GitHub:
 
 ```text
 Settings
@@ -27,7 +39,7 @@ Homepage URL:
 https://github.com/rabrunos/ExtNest
 
 Redirect URI:
-http://127.0.0.1
+https://econfanmnmmcggpgdflcipmdlmkcbiag.chromiumapp.org/github
 
 Allow wildcard matching:
 DESATIVADO
@@ -39,64 +51,43 @@ Expire user access tokens:
 ATIVADO
 ```
 
-O ExtNest usa Authorization Code + PKCE com callback de loopback em porta aleatória.
+### Quando publicar nas Stores
 
-Exemplo:
+Edge Add-ons e Chrome Web Store podem gerar IDs diferentes.
 
-```text
-Callback cadastrado:
-http://127.0.0.1
-
-Callback durante o login:
-http://127.0.0.1:53142
-```
-
-### Client Secret para desenvolvimento
-
-Na página do OAuth App:
+O OAuth App aceita vários Redirect URIs. Adicione também:
 
 ```text
-Client secrets
-→ Generate a new client secret
+https://<EDGE_STORE_ID>.chromiumapp.org/github
+https://<CHROME_STORE_ID>.chromiumapp.org/github
 ```
 
-Não envie esse valor para o GitHub do ExtNest.
+sem remover o redirect de desenvolvimento enquanto ele ainda for usado.
 
-No PC de desenvolvimento, rode:
+### Client Secret
+
+O GitHub exige Client Secret na troca de Authorization Code por token para OAuth Apps, mesmo com PKCE.
+
+Para desenvolvimento:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\native-host\setup\set-dev-github-secret.ps1
 ```
 
-Cole o Client Secret quando solicitado.
+O arquivo local `native-host/oauth-private.json` fica fora do Git.
 
-O script cria:
+### Fluxo
 
 ```text
-native-host/oauth-private.json
+Conectar com GitHub
+→ chrome.identity.launchWebAuthFlow
+→ GitHub
+→ Autorizar
+→ *.chromiumapp.org/github
+→ navegador fecha a janela OAuth automaticamente
+→ Native Host troca o code por token
+→ ExtNest confirma /user
+→ conectado
 ```
 
-Esse arquivo é ignorado pelo Git.
-
-### Teste
-
-1. `git pull`
-2. gere e salve o Client Secret local;
-3. recarregue a extensão em `edge://extensions`;
-4. clique **Conectar com GitHub**;
-5. GitHub abre;
-6. escolha/autorize a conta;
-7. GitHub retorna automaticamente ao loopback local;
-8. clique **Carregar repositórios**.
-
-Não deve existir código de Device Flow nem instalação de GitHub App.
-
----
-
-## Microsoft / OneDrive
-
-Fazer depois do GitHub.
-
-## Google Drive
-
-Fazer depois do GitHub.
+Não existe página `127.0.0.1` no fluxo GitHub e não existe código Device Flow.
