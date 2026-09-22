@@ -1,7 +1,9 @@
 $ErrorActionPreference = "Stop"
 
-$NativeHostRoot = Split-Path -Parent $PSScriptRoot
-$Output = Join-Path $NativeHostRoot "oauth-private.json"
+$StableRoot = Join-Path $env:LOCALAPPDATA "ExtNest\NativeHostDev"
+$Output = Join-Path $StableRoot "oauth-private.json"
+
+New-Item -ItemType Directory -Force -Path $StableRoot | Out-Null
 
 $Secure = Read-Host "Cole o Client Secret do OAuth App ExtNest" -AsSecureString
 $Ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Secure)
@@ -26,10 +28,10 @@ try {
     )
 
     Write-Host ""
-    Write-Host "Client Secret salvo localmente em:" -ForegroundColor Green
+    Write-Host "Client Secret salvo fora do repositorio:" -ForegroundColor Green
     Write-Host $Output
     Write-Host ""
-    Write-Host "Esse arquivo esta no .gitignore e nao deve ser commitado." -ForegroundColor Yellow
+    Write-Host "Apagar ou reclonar C:\Dev\ExtNest nao remove mais essa configuracao." -ForegroundColor Cyan
 }
 finally {
     if ($Ptr -ne [IntPtr]::Zero) {
