@@ -1,64 +1,51 @@
-# GitHub Auth — OAuth App
+# GitHub Auth — OAuth App + PKCE
 
-## Objetivo
+## Experiência
 
-O ExtNest deve ter o fluxo mais simples possível:
+O login do ExtNest é:
 
 ```text
 Conectar com GitHub
-→ autorizar a conta
-→ pronto
+→ navegador oficial do GitHub
+→ escolher/autorizar conta
+→ retorno automático para 127.0.0.1
+→ conectado
 ```
 
-Não existe instalação de GitHub App e não existe seleção de repositórios no GitHub.
+Não existe:
+- código de Device Flow;
+- instalação de GitHub App;
+- token manual.
 
-## Por que OAuth App
+## Authorization Code + PKCE
 
-Um OAuth App pode acessar os repositórios que o próprio usuário autenticado já consegue acessar.
+O ExtNest gera:
+- `state` aleatório;
+- `code_verifier`;
+- `code_challenge` SHA-256 (`S256`);
+- servidor loopback temporário em `127.0.0.1:<porta aleatória>`.
 
-Isso combina com o ExtNest porque:
-- o processamento acontece no computador do usuário;
-- o GitHub serve apenas como fonte do código;
-- o ExtNest não precisa agir independentemente do usuário;
-- o usuário escolhe dentro do ExtNest quais repositórios quer gerenciar.
-
-## Limitação importante do GitHub
-
-Para ler código de **repositórios privados**, um OAuth App precisa solicitar:
+O callback cadastrado no GitHub deve ser:
 
 ```text
-repo
+http://127.0.0.1
 ```
 
-O GitHub atualmente não oferece um escopo OAuth que limite código privado a read-only.
+## Client Secret
 
-O escopo `repo` tecnicamente permite operações de escrita também.
+Para OAuth Apps, o GitHub exige `client_secret` na troca do authorization code por token.
 
-Portanto, o read-only do ExtNest é garantido pelo **desenho do aplicativo**, não pelo escopo OAuth.
+Por isso:
+- o secret nunca é commitado;
+- desenvolvimento usa `native-host/oauth-private.json`;
+- esse arquivo está no `.gitignore`;
+- alternativamente pode ser usado `EXTNEST_GITHUB_CLIENT_SECRET`.
 
-## Regra de implementação
+Em produção sem backend, esse valor precisará estar no Native Host final e, por ser um cliente instalado no PC, deve ser considerado recuperável. O PKCE protege o authorization code contra interceptação, mas não torna um segredo embutido realmente confidencial.
 
-O ExtNest pode:
-- `GET` em APIs GitHub;
-- listar repositórios;
-- ler arquivos;
-- clone;
-- fetch;
-- pull;
-- verificar versões;
-- baixar código.
+## Acesso aos repositórios
 
-O ExtNest não implementa:
-- push;
-- criação de commits no GitHub;
-- edição de arquivos remotos;
-- branches remotos;
-- merges;
-- administração de repositório.
-
-O clone operacional do ExtNest também recebe um `pushurl` inválido como proteção adicional contra push acidental.
-
-## Scopes
+Scopes:
 
 ```text
 repo
@@ -66,45 +53,17 @@ read:user
 offline_access
 ```
 
-- `repo`: necessário para conteúdo de repositórios privados.
-- `read:user`: perfil básico.
-- `offline_access`: access token expirável + refresh token.
+O GitHub não fornece um scope OAuth de conteúdo privado read-only.
 
-## Device Flow
+O ExtNest reforça read-only no próprio desenho:
+- apenas GET nas APIs;
+- clone/fetch/pull;
+- sem push;
+- push URL do clone operacional é deliberadamente inválida.
 
-ExtNest usa OAuth Device Flow.
+## Tokens
 
-1. O helper solicita `device_code`.
-2. Abre `https://github.com/login/device`.
-3. Usuário autoriza.
-4. ExtNest recebe token.
-5. Tokens ficam somente no computador do usuário e são protegidos por Windows DPAPI.
-6. Refresh ocorre automaticamente quando necessário.
-
-## Segurança do token
-
-No desenho atual o ExtNest não possui servidor para receber tokens e não transmite tokens para infraestrutura própria.
-
-O token é enviado somente ao GitHub para autenticação.
-
-Tecnicamente, qualquer software que tenha acesso a um token poderia ser programado para transmiti-lo. Por isso:
-- o projeto deve permanecer auditável;
-- tokens nunca entram no Git;
-- tokens ficam protegidos por DPAPI;
-- não existe telemetria contendo credenciais.
-
-## Configuração pública
-
-`native-host/oauth-clients.json`:
-
-```json
-{
-  "github": {
-    "type": "oauth_app",
-    "client_id": "Ov23liTysBeDh3EtPQrb",
-    "scopes": ["repo", "read:user", "offline_access"]
-  }
-}
-```
-
-Nenhum client secret é distribuído com o ExtNest.
+Access token e refresh token:
+- ficam somente no computador;
+- são protegidos com Windows DPAPI;
+- não são enviados para infraestrutura do ExtNest.
