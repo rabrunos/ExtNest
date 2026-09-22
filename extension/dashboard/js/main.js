@@ -51,6 +51,9 @@ function updateSidebar() {
   document.getElementById("cloudLabel").textContent = cloudLabel;
   setDot("cloudDot", state.cloud.primary ? "good" : "warn");
   document.getElementById("extCount").textContent = state.registry.length || "";
+
+  const manifest = chrome.runtime.getManifest();
+  document.getElementById("appVersion").textContent = "v" + (manifest.version || "—");
 }
 
 export async function refreshState() {
