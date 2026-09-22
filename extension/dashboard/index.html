@@ -59,34 +59,44 @@
     <section class="view hidden" id="view-github">
       <div class="panel">
         <h2>GitHub</h2>
-        <p class="muted">Login oficial pelo navegador. Você não cria, copia nem cola token.</p>
+        <p class="muted">GitHub App com acesso somente aos repositórios que você autorizar.</p>
 
         <div id="githubDisconnected">
           <button class="primary provider-connect" id="connectGithubBtn">
             <span class="provider-logo">GH</span>
             <span>Conectar com GitHub</span>
           </button>
-          <p class="hint">OAuth Device Flow. O código temporário é mostrado pelo ExtNest e a autorização acontece no github.com.</p>
+          <p class="hint">O ExtNest abre a autorização oficial do GitHub. Nenhum token é digitado ou copiado manualmente.</p>
         </div>
 
         <div id="githubConnected" class="hidden">
           <div class="account-row">
             <div class="avatar-placeholder" id="githubAvatar"></div>
-            <div><strong id="githubUser">GitHub conectado</strong><span id="githubAccountDetail"></span></div>
+            <div>
+              <strong id="githubUser">GitHub conectado</strong>
+              <span id="githubAccountDetail"></span>
+            </div>
+            <button class="secondary" id="manageGithubAccessBtn">Gerenciar acesso</button>
             <button class="secondary danger" id="disconnectGithubBtn">Desconectar</button>
           </div>
+          <p class="hint">“Gerenciar acesso” abre a instalação do GitHub App para adicionar/remover repositórios permitidos.</p>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
           <div>
-            <h2>Repositórios</h2>
-            <p class="muted">Você decide manualmente quais repositórios são extensões.</p>
+            <h2>Repositórios autorizados</h2>
+            <p class="muted">O GitHub só retorna repositórios aos quais o GitHub App ExtNest foi instalado. Depois você escolhe quais entram no Vault.</p>
           </div>
           <button class="secondary" id="loadReposBtn">Carregar repositórios</button>
         </div>
-        <input id="repoSearch" class="search" placeholder="Filtrar repositórios…">
+        <div id="githubInstallNotice" class="banner hidden">
+          <strong>ExtNest ainda não tem acesso a nenhum repositório.</strong>
+          <span>Instale o GitHub App e escolha “Only select repositories”.</span>
+          <button class="secondary" id="installGithubAppBtn">Selecionar repositórios no GitHub</button>
+        </div>
+        <input id="repoSearch" class="search" placeholder="Filtrar repositórios autorizados…">
         <div id="repoList" class="repo-list"></div>
         <div class="panel-footer"><button class="primary" id="addSelectedReposBtn">Adicionar selecionados</button></div>
       </div>

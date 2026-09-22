@@ -1,8 +1,95 @@
 # OAuth — configuração única do projeto
 
-Depois que estes três aplicativos OAuth forem registrados, usuários do ExtNest apenas clicam em **Conectar** e autorizam no navegador. Eles não criam nem digitam tokens.
+Usuários finais do ExtNest não criam tokens nem Client IDs.
 
-Os Client IDs são identificadores públicos; podem ficar no repositório.
+Nós registramos uma integração oficial ExtNest em cada provedor uma vez e distribuímos apenas identificadores públicos.
+
+## 1. GitHub — fazer primeiro
+
+Crie um **GitHub App**, não um OAuth App.
+
+Caminho:
+
+```text
+GitHub
+→ Settings
+→ Developer settings
+→ GitHub Apps
+→ New GitHub App
+```
+
+### Campos principais
+
+Use:
+
+```text
+GitHub App name:
+ExtNest
+```
+
+Se o nome estiver indisponível, use algo como:
+
+```text
+ExtNest by rabrunos
+```
+
+Homepage URL:
+
+```text
+https://github.com/rabrunos/ExtNest
+```
+
+Callback URL:
+
+Pode ficar vazio para o fluxo Device Flow. O ExtNest não usa Web Application Flow no GitHub.
+
+### User authorization
+
+- Request user authorization (OAuth) during installation: **desativado**
+- Enable Device Flow: **ativado**
+- User-to-server token expiration: **ativado**
+
+### Webhook
+
+Desative **Active**.
+
+O ExtNest não precisa de webhook.
+
+### Repository permissions
+
+Configure somente:
+
+```text
+Contents: Read and write
+```
+
+Não habilite permissões adicionais sem necessidade.
+
+### Organization permissions
+
+Nenhuma.
+
+### Account permissions
+
+Nenhuma.
+
+### Where can this GitHub App be installed?
+
+Selecione:
+
+```text
+Any account
+```
+
+Isso torna o GitHub App instalável por qualquer usuário do ExtNest. Não significa publicar no GitHub Marketplace.
+
+### Após criar
+
+Na página do GitHub App copie:
+
+1. **Client ID** — é diferente do App ID.
+2. O **slug** do aplicativo, visível na URL:
+   `https://github.com/apps/<slug>`
 
 Preencha:
 
@@ -10,146 +97,50 @@ Preencha:
 native-host/oauth-clients.json
 ```
 
-## 1. GitHub
+Exemplo:
 
-Crie um **OAuth App** em GitHub → Settings → Developer settings → OAuth Apps.
-
-Configuração sugerida:
-
-```text
-Application name: ExtNest
-Homepage URL: https://github.com/rabrunos/ExtNest
-Authorization callback URL: http://localhost
+```json
+{
+  "github": {
+    "type": "github_app",
+    "client_id": "Iv1.xxxxxxxxxxxxxxxx",
+    "app_slug": "extnest"
+  }
+}
 ```
 
-Depois:
+Não gere nem coloque no ExtNest:
+- Client secret;
+- private key.
 
-1. habilite **Device Flow**;
-2. copie somente o **Client ID**;
-3. coloque em `github.client_id`;
-4. não coloque `client_secret` no projeto.
+O ExtNest é um native/public client e usa Device Flow.
 
-Escopos solicitados pelo protótipo:
+### Teste
 
-```text
-repo
-read:user
-offline_access
-```
+1. Recarregue o ExtNest.
+2. Abra GitHub.
+3. Clique **Conectar com GitHub**.
+4. Autorize o código.
+5. O ExtNest abrirá a instalação do GitHub App caso ainda não exista.
+6. Selecione **Only select repositories**.
+7. Marque um ou mais repositórios.
+8. Volte ao ExtNest.
+9. Clique **Carregar repositórios**.
 
-`repo` é necessário para os repositórios privados que o usuário escolher.
+Somente repositórios autorizados ao GitHub App devem aparecer.
 
-Documentação oficial:
-https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
+---
 
 ## 2. Microsoft / OneDrive
 
-Crie um App Registration no Microsoft Entra.
+Fazer depois que a integração GitHub estiver validada.
 
-Para permitir OneDrive pessoal e corporativo, selecione um tipo de conta compatível com:
-- contas em diretórios organizacionais;
-- contas pessoais Microsoft.
+Os placeholders continuam em `native-host/oauth-clients.json`.
 
-Em **Authentication**:
-1. adicione a plataforma **Mobile and desktop applications**;
-2. configure `http://localhost`;
-3. habilite fluxos de cliente público quando aplicável.
+---
 
-Permissões delegadas Microsoft Graph:
+## 3. Google Drive
 
-```text
-User.Read
-Files.ReadWrite.AppFolder
-```
+Fazer depois que a integração GitHub estiver validada.
 
-O fluxo também solicita:
-
-```text
-openid
-profile
-offline_access
-```
-
-Copie o **Application (client) ID** para `microsoft.client_id`.
-
-Não use client secret: o helper é um cliente público e usa Authorization Code + PKCE.
-
-O OneDrive cria o espaço do aplicativo em:
-
-```text
-Apps/ExtNest
-```
-
-O escopo `Files.ReadWrite.AppFolder` limita o acesso do ExtNest a esse espaço.
-
-Documentação oficial:
-https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-configuration
-https://learn.microsoft.com/en-us/graph/onedrive-sharepoint-appfolder
-
-## 3. Google / Google Drive
-
-No Google Cloud:
-
-1. crie/selecione um projeto;
-2. habilite **Google Drive API**;
-3. configure a tela de consentimento OAuth;
-4. crie um OAuth Client do tipo **Desktop app**;
-5. copie o Client ID para `google.client_id`.
-
-O ExtNest usa navegador do sistema + PKCE + callback de loopback `127.0.0.1`.
-
-Não usamos OOB/manual copy-paste.
-
-Escopo de backup:
-
-```text
-https://www.googleapis.com/auth/drive.appdata
-```
-
-Além de:
-
-```text
-openid
-email
-profile
-```
-
-`drive.appdata` dá acesso somente à pasta especial oculta `appDataFolder`. Ela não aparece no Meu Drive e outros apps do Drive não conseguem acessá-la.
-
-Documentação oficial:
-https://developers.google.com/identity/protocols/oauth2/native-app
-https://developers.google.com/workspace/drive/api/guides/appdata
-
-## Resultado para o usuário
-
-### GitHub
-
-```text
-Conectar com GitHub
-→ página oficial
-→ inserir o código temporário
-→ autorizar
-→ pronto
-```
-
-### OneDrive
-
-```text
-Conectar OneDrive
-→ página oficial Microsoft
-→ escolher conta
-→ autorizar
-→ retorno automático
-```
-
-### Google Drive
-
-```text
-Conectar Google Drive
-→ página oficial Google
-→ escolher conta
-→ autorizar
-→ retorno automático
-```
-
-Tokens de acesso e refresh tokens são protegidos localmente pelo Windows DPAPI.
+Os placeholders continuam em `native-host/oauth-clients.json`.

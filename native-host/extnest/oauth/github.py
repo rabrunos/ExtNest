@@ -1,5 +1,3 @@
-import json, urllib.parse, urllib.request
-from pathlib import Path
 from .tokens import save_tokens, load_tokens, clear_tokens, expires_soon
 from ..config import provider_config
 from ..paths import AUTH
@@ -13,21 +11,38 @@ SESSION_FILE = AUTH / "github-device.json"
 def _config():
     return provider_config("github")
 
+def app_slug():
+    slug = (_config().get("app_slug") or "").strip()
+    if not slug or slug.startswith("SET_"):
+        raise RuntimeError(
+            "GitHub App slug ainda não configurado. "
+            "Preencha github.app_slug em native-host/oauth-clients.json."
+        )
+    return slug
+
+def install_url():
+    return f"https://github.com/apps/{app_slug()}/installations/new"
+
 def begin():
     config = _config()
+
+    # GitHub App user tokens do not use OAuth scopes. Their permissions are
+    # the intersection of the GitHub App permissions, the installation's
+    # selected repositories, and the authenticated user's own permissions.
     response = form_post(
         "https://github.com/login/device/code",
         {
-            "client_id": config["client_id"],
-            "scope": " ".join(config.get("scopes") or ["repo", "read:user", "offline_access"])
+            "client_id": config["client_id"]
         },
         headers={"Accept": "application/json"}
     )
+
     save_json(SESSION_FILE, {
         "device_code": response["device_code"],
         "expires_at": now_ts() + int(response.get("expires_in", 900)),
         "interval": int(response.get("interval", 5))
     })
+
     return {
         "user_code": response["user_code"],
         "verification_uri": response["verification_uri"],
@@ -38,8 +53,10 @@ def begin():
 def poll():
     config = _config()
     session = load_json(SESSION_FILE, None)
+
     if not session:
         raise RuntimeError("Nenhuma autenticação GitHub em andamento.")
+
     if int(session["expires_at"]) <= now_ts():
         SESSION_FILE.unlink(missing_ok=True)
         return {"connected": False, "status": "expired_token"}
@@ -59,8 +76,13 @@ def poll():
 
     save_tokens("github", response)
     SESSION_FILE.unlink(missing_ok=True)
+
     current = profiles.set("github", profile())
-    return {"connected": True, "profile": current}
+    return {
+        "connected": True,
+        "profile": current,
+        "install_url": install_url()
+    }
 
 def _refresh(tokens):
     config = _config()
@@ -73,26 +95,31 @@ def _refresh(tokens):
         },
         headers={"Accept": "application/json"}
     )
+
     if response.get("error"):
         raise RuntimeError(response.get("error_description") or response["error"])
+
     return save_tokens("github", response)
 
 def access_token():
     tokens = load_tokens("github")
     if not tokens:
         raise RuntimeError("GitHub não conectado.")
-    if expires_soon(tokens) and tokens.get("refresh_token"):
+
+    if expires_soon(tokens):
+        if not tokens.get("refresh_token"):
+            raise RuntimeError("Sessão GitHub expirada. Conecte novamente.")
         tokens = _refresh(tokens)
+
     return tokens["access_token"]
 
 def profile():
-    token = access_token()
     user = api_json(
         "https://api.github.com/user",
-        token,
+        access_token(),
         headers={
             "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
+            "X-GitHub-Api-Version": "2026-03-10",
             "User-Agent": "ExtNest/0.2"
         }
     )
@@ -105,6 +132,7 @@ def profile():
 def connected_profile():
     if not load_tokens("github"):
         return None
+
     try:
         return profiles.set("github", profile())
     except Exception:

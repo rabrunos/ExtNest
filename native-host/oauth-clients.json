@@ -1,12 +1,9 @@
 {
-  "schema": 1,
+  "schema": 2,
   "github": {
-    "client_id": "SET_GITHUB_OAUTH_CLIENT_ID",
-    "scopes": [
-      "repo",
-      "read:user",
-      "offline_access"
-    ]
+    "type": "github_app",
+    "client_id": "SET_GITHUB_APP_CLIENT_ID",
+    "app_slug": "SET_GITHUB_APP_SLUG"
   },
   "microsoft": {
     "client_id": "SET_MICROSOFT_ENTRA_CLIENT_ID",
