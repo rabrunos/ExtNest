@@ -15,6 +15,10 @@ import { renderSettings, saveSettings } from "./views/settings.js";
 
 const REQUIRED_NATIVE_PROTOCOL = 3;
 
+let helperInstallerDownloadId = null;
+let helperInstallerReady = false;
+let helperPolling = false;
+
 async function installedDevelopmentExtensions() {
   const all = await chrome.management.getAll();
   return all.filter(item =>
@@ -112,8 +116,10 @@ export async function refreshState() {
       outdated
         ? "Instale a versão mais recente do componente local para continuar."
         : "Instale o componente local uma única vez. Não é necessário configurar pastas, Registro ou PowerShell.";
-    document.getElementById("installHelperBtn").textContent =
-      outdated ? "Atualizar componente" : "Finalizar instalação";
+    if (!helperInstallerReady) {
+      document.getElementById("installHelperBtn").textContent =
+        outdated ? "Atualizar componente" : "Finalizar instalação";
+    }
   }
 
   updateSidebar();
@@ -121,6 +127,28 @@ export async function refreshState() {
   renderGitHub();
   renderCloud();
   renderSettings();
+}
+
+async function startHelperPolling() {
+  if (helperPolling) return;
+  helperPolling = true;
+
+  try {
+    const deadline = Date.now() + 120000;
+
+    while (!state.helperOnline && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await refreshState();
+    }
+
+    if (state.helperOnline) {
+      helperInstallerReady = false;
+      helperInstallerDownloadId = null;
+      toast("Componente local instalado. ExtNest pronto para uso.");
+    }
+  } finally {
+    helperPolling = false;
+  }
 }
 
 function setView(name) {
@@ -148,26 +176,43 @@ function wire() {
 
   document.getElementById("installHelperBtn").addEventListener("click", async () => {
     const button = document.getElementById("installHelperBtn");
+
+    if (helperInstallerReady && helperInstallerDownloadId != null) {
+      try {
+        await chrome.downloads.open(helperInstallerDownloadId);
+        button.textContent = "Aguardando instalação...";
+        toast("Conclua o instalador. O ExtNest detectará o componente automaticamente.");
+        startHelperPolling();
+      } catch (error) {
+        chrome.downloads.show(helperInstallerDownloadId);
+        toast(error?.message || "Abra o instalador pela pasta de Downloads.");
+      }
+      return;
+    }
+
     button.disabled = true;
-    const previous = button.textContent;
     button.textContent = "Baixando...";
 
     try {
-      const downloadId = await new Promise((resolve, reject) => {
+      helperInstallerDownloadId = await new Promise((resolve, reject) => {
         chrome.downloads.download({
           url: HELPER_INSTALLER_URL,
           filename: "ExtNest/ExtNestHelperSetup.exe",
           saveAs: false
         }, id => {
           const error = chrome.runtime.lastError;
-          if (error || id == null) reject(new Error(error?.message || "Falha ao baixar o instalador."));
-          else resolve(id);
+          if (error || id == null) {
+            reject(new Error(error?.message || "Falha ao baixar o instalador."));
+          } else {
+            resolve(id);
+          }
         });
       });
 
       await new Promise((resolve, reject) => {
         const listener = delta => {
-          if (delta.id !== downloadId || !delta.state) return;
+          if (delta.id !== helperInstallerDownloadId || !delta.state) return;
+
           if (delta.state.current === "complete") {
             chrome.downloads.onChanged.removeListener(listener);
             resolve();
@@ -176,31 +221,18 @@ function wire() {
             reject(new Error("O download do componente local foi interrompido."));
           }
         };
+
         chrome.downloads.onChanged.addListener(listener);
       });
 
-      try {
-        await chrome.downloads.open(downloadId);
-      } catch {
-        chrome.downloads.show(downloadId);
-      }
-
-      button.textContent = "Aguardando instalação...";
-      toast("Conclua o instalador do ExtNest. O painel detectará automaticamente quando terminar.");
-
-      const deadline = Date.now() + 120000;
-      while (Date.now() < deadline) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        await refreshState();
-        if (state.helperOnline) {
-          toast("Componente local instalado.");
-          return;
-        }
-      }
-
-      button.textContent = "Verificar novamente";
+      helperInstallerReady = true;
+      button.textContent = "Abrir instalador";
+      toast("Download concluído. Clique em Abrir instalador.");
+      startHelperPolling();
     } catch (error) {
-      button.textContent = previous;
+      helperInstallerDownloadId = null;
+      helperInstallerReady = false;
+      button.textContent = "Finalizar instalação";
       toast(error.message);
     } finally {
       button.disabled = false;
