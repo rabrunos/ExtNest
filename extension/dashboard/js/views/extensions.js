@@ -38,7 +38,7 @@ export async function renderExtensions(refreshAll) {
   wrap.innerHTML = "";
 
   if (!state.registry.length) {
-    wrap.innerHTML = `<div class="panel"><h2>Nenhuma extensão adicionada</h2><p>Conecte o GitHub e selecione os repositórios que devem aparecer no ExtNest.</p></div>`;
+    wrap.innerHTML = `<div class="panel"><h2>Nenhuma extensão adicionada</h2><p>Conecte uma conta GitHub para repositórios privados ou adicione um repositório público sem login.</p></div>`;
     renderDetected();
     return;
   }
@@ -52,6 +52,12 @@ export async function renderExtensions(refreshAll) {
     const bridge = installed ? await bridgePing(installed.id) : null;
     const updateAvailable = !!(installed && status?.update_available);
     const localExists = !!status?.local_exists;
+    const account = (state.auth.github_accounts || []).find(
+      x => String(x.account_id) === String(item.account_id || "")
+    );
+    const sourceLabel = item.private
+      ? (account?.login ? "@" + account.login : "Conta desconectada")
+      : "Público";
 
     const card = document.createElement("article");
     card.className = "card";
@@ -68,6 +74,7 @@ export async function renderExtensions(refreshAll) {
       <div class="meta">
         <div class="meta-item"><span>Instalada</span><strong>${esc(installed?.version || status?.local_version || "—")}</strong></div>
         <div class="meta-item"><span>GitHub</span><strong>${esc(status?.remote_version || "—")}</strong></div>
+        <div class="meta-item"><span>Origem</span><strong>${esc(sourceLabel)}</strong></div>
         <div class="meta-item"><span>Config Bridge</span><strong>${bridge?.ok ? "Compatível" : installed ? "Não detectado" : "—"}</strong></div>
         <div class="meta-item"><span>Config na nuvem</span><strong>${status?.config_backup ? "Salva" : "—"}</strong></div>
       </div>
