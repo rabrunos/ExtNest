@@ -35,20 +35,54 @@ jobs:
           pyinstaller --noconfirm --clean --onefile --name ExtNestHost --distpath build/helper --workpath build/pyinstaller --specpath build/pyinstaller native-host/extnest_host.py
           Copy-Item native-host/oauth-clients.json build/helper/oauth-clients.json
 
-      - name: Write OAuth private config
+      - name: Write packaged configuration
         shell: pwsh
         env:
           EXTNEST_GITHUB_CLIENT_SECRET: ${{ secrets.EXTNEST_GITHUB_CLIENT_SECRET }}
+          EXTNEST_EDGE_STORE_ID: ${{ vars.EXTNEST_EDGE_STORE_ID }}
+          EXTNEST_CHROME_STORE_ID: ${{ vars.EXTNEST_CHROME_STORE_ID }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:EXTNEST_GITHUB_CLIENT_SECRET)) {
             throw "Repository secret EXTNEST_GITHUB_CLIENT_SECRET is not configured."
           }
-          $payload = @{
+
+          $private = @{
             github = @{
               client_secret = $env:EXTNEST_GITHUB_CLIENT_SECRET
             }
           } | ConvertTo-Json -Depth 4
-          [System.IO.File]::WriteAllText("build/helper/oauth-private.json", $payload, [System.Text.UTF8Encoding]::new($false))
+
+          [System.IO.File]::WriteAllText(
+            "build/helper/oauth-private.json",
+            $private,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          $origins = @(
+            "chrome-extension://econfanmnmmcggpgdflcipmdlmkcbiag/"
+          )
+
+          if (-not [string]::IsNullOrWhiteSpace($env:EXTNEST_EDGE_STORE_ID)) {
+            $origins += "chrome-extension://$($env:EXTNEST_EDGE_STORE_ID)/"
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace($env:EXTNEST_CHROME_STORE_ID)) {
+            $origins += "chrome-extension://$($env:EXTNEST_CHROME_STORE_ID)/"
+          }
+
+          $nativeManifest = @{
+            name = "com.extnest.host"
+            description = "ExtNest Native Messaging Host"
+            path = "__EXTNEST_HOST_PATH__"
+            type = "stdio"
+            allowed_origins = $origins
+          } | ConvertTo-Json -Compress -Depth 5
+
+          [System.IO.File]::WriteAllText(
+            "build/helper/com.extnest.host.template.json",
+            $nativeManifest,
+            [System.Text.UTF8Encoding]::new($false)
+          )
 
       - name: Bundle portable Git
         shell: pwsh
