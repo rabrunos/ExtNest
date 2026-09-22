@@ -1,4 +1,4 @@
-import { VIEWS, HELPER_INSTALLER_URL, HELPER_RELEASE_API, HELPER_ASSET_NAME } from "../../shared/constants.js";
+import { VIEWS, MIN_HELPER_VERSION, HELPER_INSTALLER_URL, HELPER_RELEASE_API, HELPER_ASSET_NAME } from "../../shared/constants.js";
 import { nativeMessage, nativeOk } from "./api/native.js";
 import { state } from "./state.js";
 import { toast } from "./ui/toast.js";
@@ -169,13 +169,12 @@ export async function refreshState() {
       );
     }
 
-    const appVersion = chrome.runtime.getManifest().version || "0.0.0";
     const helperVersion = response.host?.version || "0.0.0";
 
-    if (versionLt(helperVersion, appVersion)) {
+    if (versionLt(helperVersion, MIN_HELPER_VERSION)) {
       throw new Error(
         "Native Host desatualizado (Helper " + helperVersion +
-        "; ExtNest " + appVersion + "). Atualize o componente local."
+        "; mínimo necessário " + MIN_HELPER_VERSION + "). Atualize o componente local."
       );
     }
 
