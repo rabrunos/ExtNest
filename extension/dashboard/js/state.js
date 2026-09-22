@@ -3,7 +3,12 @@ export const state = {
   helperError: "",
   registry: [],
   installed: [],
-  auth: { github: null, microsoft: null, google: null },
+  auth: {
+    github_accounts: [],
+    github: null,
+    microsoft: null,
+    google: null
+  },
   cloud: { primary: "" },
   paths: null,
   repos: []
