@@ -49,7 +49,8 @@ var
   TemplatePath: String;
   ManifestPath: String;
   HostPath: String;
-  Json: AnsiString;
+  RawJson: AnsiString;
+  Json: String;
 begin
   if CurStep = ssPostInstall then
   begin
@@ -57,12 +58,13 @@ begin
     ManifestPath := ExpandConstant('{app}\com.extnest.host.json');
     HostPath := ExpandConstant('{app}\ExtNestHost.exe');
 
-    if not LoadStringFromFile(TemplatePath, Json) then
+    if not LoadStringFromFile(TemplatePath, RawJson) then
       RaiseException('Falha ao ler o template do Native Host.');
 
+    Json := String(RawJson);
     StringChangeEx(Json, '__EXTNEST_HOST_PATH__', JsonEscape(HostPath), True);
 
-    if not SaveStringToFile(ManifestPath, Json, False) then
+    if not SaveStringToFile(ManifestPath, AnsiString(Json), False) then
       RaiseException('Falha ao criar o manifest do ExtNest Native Host.');
 
     DeleteFile(TemplatePath);
