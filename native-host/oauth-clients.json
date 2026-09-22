@@ -2,7 +2,7 @@
   "schema": 3,
   "github": {
     "type": "oauth_app",
-    "client_id": "SET_GITHUB_OAUTH_CLIENT_ID",
+    "client_id": "Ov23liTysBeDh3EtPQrb",
     "scopes": [
       "repo",
       "read:user",

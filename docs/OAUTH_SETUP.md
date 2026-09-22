@@ -52,10 +52,10 @@ Depois clique em:
 Register application
 ```
 
-Copie somente:
+Client ID configurado no projeto:
 
 ```text
-Client ID
+Ov23liTysBeDh3EtPQrb
 ```
 
 Não é necessário distribuir `Client secret` no ExtNest.

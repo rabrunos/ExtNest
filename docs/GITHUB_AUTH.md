@@ -101,7 +101,7 @@ Tecnicamente, qualquer software que tenha acesso a um token poderia ser programa
 {
   "github": {
     "type": "oauth_app",
-    "client_id": "CLIENT_ID_PUBLICO",
+    "client_id": "Ov23liTysBeDh3EtPQrb",
     "scopes": ["repo", "read:user", "offline_access"]
   }
 }
