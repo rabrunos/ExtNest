@@ -39,8 +39,9 @@ Type: files; Name: "{app}\com.extnest.host.json"
 [Code]
 function JsonEscape(Value: String): String;
 begin
-  Result := StringChangeEx(Value, '\', '\\', True);
-  Result := StringChangeEx(Result, '"', '\"', True);
+  Result := Value;
+  StringChangeEx(Result, '\', '\\', True);
+  StringChangeEx(Result, '"', '\"', True);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
