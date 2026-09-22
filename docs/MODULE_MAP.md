@@ -97,3 +97,18 @@ Leia:
 - `docs/AI_EXTENSION_STANDARD.md`
 - `docs/BRIDGE_PROTOCOL.md`
 - `templates/managed-extension/`
+
+
+## Helper / instalador
+
+Leia:
+- `installer/ExtNestHelper.iss`
+- `.github/workflows/build-helper.yml`
+- `native-host/extnest_host.py`
+- `native-host/extnest/config.py`
+- `native-host/extnest/repos.py`
+- `extension/dashboard/js/main.js`
+- `extension/shared/constants.js`
+- `docs/HELPER_INSTALLER.md`
+
+Regra: usuário final nunca executa PowerShell, edita Registro, escolhe pasta do helper ou fornece Client Secret.
