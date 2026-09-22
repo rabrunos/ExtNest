@@ -8,7 +8,7 @@ from .oauth import github, microsoft, google
 from .oauth import profiles
 from .cloud import manager as cloud
 
-HOST_VERSION = "0.4.0"
+HOST_VERSION = "0.4.1"
 PROTOCOL_VERSION = 3
 
 def _auth_state():
