@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ExtNest</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="../icons/icon48.png" alt="">
+      <div><strong>ExtNest</strong><span>private extension nest</span></div>
+    </div>
+
+    <nav>
+      <button class="nav active" data-view="extensions">Extensões <span id="extCount"></span></button>
+      <button class="nav" data-view="github">GitHub</button>
+      <button class="nav" data-view="cloud">Nuvem</button>
+      <button class="nav" data-view="settings">Configurações</button>
+    </nav>
+
+    <div class="side-status">
+      <div><span class="dot" id="helperDot"></span> Helper <b id="helperLabel">verificando…</b></div>
+      <div><span class="dot" id="gitDot"></span> GitHub <b id="gitLabel">—</b></div>
+      <div><span class="dot" id="cloudDot"></span> Nuvem <b id="cloudLabel">—</b></div>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <div>
+        <h1 id="viewTitle">Minhas extensões</h1>
+        <p id="viewSubtitle">Código no GitHub. Instalação local no AppData. Configurações na sua nuvem.</p>
+      </div>
+      <div class="header-actions" id="headerActions">
+        <button class="secondary" id="refreshBtn">Atualizar</button>
+        <button class="primary" id="addRepoBtn">Adicionar extensão</button>
+      </div>
+    </header>
+
+    <section class="view" id="view-extensions">
+      <div class="banner hidden" id="helperBanner">
+        <strong id="helperBannerTitle">Native Host não encontrado.</strong>
+        <span id="helperBannerMessage">O ExtNest precisa do helper local para Git e arquivos no AppData.</span>
+      </div>
+      <div id="extensionCards" class="cards"></div>
+
+      <div class="section-title">
+        <h2>Extensões de desenvolvimento detectadas</h2>
+        <p>Extensões carregadas manualmente no Edge/Chrome que ainda não fazem parte do Vault.</p>
+      </div>
+      <div id="detectedList" class="detected-list"></div>
+    </section>
+
+    <section class="view hidden" id="view-github">
+      <div class="panel">
+        <h2>GitHub</h2>
+        <p class="muted">Login oficial pelo navegador. Você não cria, copia nem cola token.</p>
+
+        <div id="githubDisconnected">
+          <button class="primary provider-connect" id="connectGithubBtn">
+            <span class="provider-logo">GH</span>
+            <span>Conectar com GitHub</span>
+          </button>
+          <p class="hint">OAuth Device Flow. O código temporário é mostrado pelo ExtNest e a autorização acontece no github.com.</p>
+        </div>
+
+        <div id="githubConnected" class="hidden">
+          <div class="account-row">
+            <div class="avatar-placeholder" id="githubAvatar"></div>
+            <div><strong id="githubUser">GitHub conectado</strong><span id="githubAccountDetail"></span></div>
+            <button class="secondary danger" id="disconnectGithubBtn">Desconectar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Repositórios</h2>
+            <p class="muted">Você decide manualmente quais repositórios são extensões.</p>
+          </div>
+          <button class="secondary" id="loadReposBtn">Carregar repositórios</button>
+        </div>
+        <input id="repoSearch" class="search" placeholder="Filtrar repositórios…">
+        <div id="repoList" class="repo-list"></div>
+        <div class="panel-footer"><button class="primary" id="addSelectedReposBtn">Adicionar selecionados</button></div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-cloud">
+      <div class="panel">
+        <h2>Backup na nuvem</h2>
+        <p class="muted">O ExtNest usa somente o armazenamento reservado ao aplicativo.</p>
+
+        <div class="provider-grid">
+          <article class="provider-card">
+            <div class="provider-card-head">
+              <div class="provider-logo large">M</div>
+              <div><strong>OneDrive</strong><span>App Folder · acesso mínimo</span></div>
+            </div>
+            <div id="microsoftDisconnected"><button class="primary" id="connectMicrosoftBtn">Conectar OneDrive</button></div>
+            <div id="microsoftConnected" class="provider-connected hidden">
+              <div><strong id="microsoftUser">Conectado</strong><span id="microsoftAccount"></span></div>
+              <button class="secondary danger" id="disconnectMicrosoftBtn">Desconectar</button>
+            </div>
+            <p class="hint">Usa o App Folder do OneDrive: <code>Apps/ExtNest</code>. O app só recebe acesso a esse espaço.</p>
+          </article>
+
+          <article class="provider-card">
+            <div class="provider-card-head">
+              <div class="provider-logo large">G</div>
+              <div><strong>Google Drive</strong><span>appDataFolder · oculta</span></div>
+            </div>
+            <div id="googleDisconnected"><button class="primary" id="connectGoogleBtn">Conectar Google Drive</button></div>
+            <div id="googleConnected" class="provider-connected hidden">
+              <div><strong id="googleUser">Conectado</strong><span id="googleAccount"></span></div>
+              <button class="secondary danger" id="disconnectGoogleBtn">Desconectar</button>
+            </div>
+            <p class="hint">Usa <code>drive.appdata</code>. Os dados ficam ocultos no Drive e não aparecem no Meu Drive.</p>
+          </article>
+        </div>
+
+        <div class="cloud-primary">
+          <label for="primaryCloud">Destino principal</label>
+          <select id="primaryCloud">
+            <option value="">Nenhum</option>
+            <option value="microsoft">OneDrive</option>
+            <option value="google">Google Drive</option>
+          </select>
+          <button class="secondary" id="syncCloudNowBtn">Sincronizar agora</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Estrutura lógica do backup</h2>
+        <pre class="tree-preview">ExtNest/
+├── vault/
+│   ├── settings.json
+│   └── extensions.json
+└── extensions/
+    └── &lt;extensão&gt;/
+        ├── metadata.json
+        └── config.json</pre>
+        <p class="hint">O código-fonte continua somente no GitHub.</p>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-settings">
+      <div class="panel">
+        <h2>Atualizações</h2>
+        <label class="toggle-row"><input id="autoCheck" type="checkbox" checked><span>Verificar automaticamente se existe versão nova no GitHub</span></label>
+        <label for="checkInterval">Intervalo</label>
+        <select id="checkInterval">
+          <option value="60">1 hora</option>
+          <option value="360" selected>6 horas</option>
+          <option value="720">12 horas</option>
+          <option value="1440">24 horas</option>
+        </select>
+        <p class="hint">O ExtNest apenas notifica. Atualizar continua sendo uma ação sua.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Configurações das extensões</h2>
+        <label class="toggle-row"><input id="autoConfigBackup" type="checkbox" checked><span>Backup automático quando uma extensão compatível mudar suas configurações</span></label>
+        <label class="toggle-row"><input id="askRestore" type="checkbox" checked><span>Perguntar sobre restauração quando houver backup</span></label>
+      </div>
+
+      <div class="panel">
+        <h2>Diretórios locais</h2>
+        <div class="kv"><span>Extensões</span><code id="extensionsPath">—</code></div>
+        <div class="kv"><span>Dados do Vault</span><code id="dataPath">—</code></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop hidden" id="modalBackdrop"></div>
+
+<div class="modal hidden" id="installModal">
+  <div class="modal-head"><h2>Carregar no navegador</h2><button data-close="installModal">×</button></div>
+  <div class="modal-body">
+    <p>O repositório foi preparado no AppData. O navegador exige o primeiro <b>Load unpacked</b> manualmente.</p>
+    <div class="path-box"><code id="installPath"></code><button id="copyInstallPath">Copiar</button></div>
+    <ol>
+      <li>Abra a página de extensões.</li>
+      <li>Ative o modo de desenvolvedor.</li>
+      <li>Clique em carregar sem compactação.</li>
+      <li>Selecione a pasta acima.</li>
+    </ol>
+  </div>
+  <div class="modal-foot">
+    <button class="secondary" id="openExtensionsPage">Abrir extensões</button>
+    <button class="primary" data-close="installModal">Entendi</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="deviceModal">
+  <div class="modal-head"><h2>Conectar GitHub</h2><button data-close="deviceModal">×</button></div>
+  <div class="modal-body">
+    <p>Autorize o ExtNest na página oficial do GitHub.</p>
+    <div class="oauth-code-block">
+      <span>Código</span><strong id="deviceCode">—</strong>
+      <button class="secondary" id="copyDeviceCode">Copiar</button>
+    </div>
+    <p class="hint" id="deviceHint">A página será aberta automaticamente.</p>
+  </div>
+</div>
+
+<div class="modal hidden" id="waitModal">
+  <div class="modal-head"><h2 id="waitTitle">Conectando…</h2></div>
+  <div class="modal-body">
+    <div class="oauth-wait"><span class="spinner"></span><strong id="waitMessage">Conclua a autorização no navegador.</strong></div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "github": {
+    "client_id": "SET_GITHUB_OAUTH_CLIENT_ID",
+    "scopes": [
+      "repo",
+      "read:user",
+      "offline_access"
+    ]
+  },
+  "microsoft": {
+    "client_id": "SET_MICROSOFT_ENTRA_CLIENT_ID",
+    "tenant": "common",
+    "scopes": [
+      "offline_access",
+      "openid",
+      "profile",
+      "User.Read",
+      "Files.ReadWrite.AppFolder"
+    ]
+  },
+  "google": {
+    "client_id": "SET_GOOGLE_DESKTOP_CLIENT_ID",
+    "scopes": [
+      "openid",
+      "email",
+      "profile",
+      "https://www.googleapis.com/auth/drive.appdata"
+    ]
+  }
+}

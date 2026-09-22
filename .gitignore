@@ -24,3 +24,7 @@ secrets/
 
 # ExtNest runtime data must never enter the repo
 ExtNestData/
+
+client_secret*.json
+*.oauth.json
+native-host/com.extnest.host.generated.json

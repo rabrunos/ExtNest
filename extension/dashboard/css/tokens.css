@@ -1,0 +1,13 @@
+:root{
+  color-scheme:light dark;
+  --bg:#f5f5f5;--panel:#fff;--sidebar:#eeeeee;--line:#dedede;
+  --text:#242424;--muted:#666;--soft:#f0f0f0;--hover:#e9e9e9;
+  --accent:#242424;--accentText:#fff;--good:#15803d;--warn:#b45309;--bad:#b91c1c;
+  --radius:12px;--font:"Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  font-family:var(--font)
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#202020;--panel:#292929;--sidebar:#252525;--line:#3b3b3b;--text:#f5f5f5;--muted:#aaa;--soft:#333;--hover:#383838;--accent:#f5f5f5;--accentText:#242424}
+}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text)}
+body{font:14px/1.4 var(--font)}button,input,select{font:inherit;color:inherit}.hidden{display:none!important}button{cursor:pointer;border:0}
