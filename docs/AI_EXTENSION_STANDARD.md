@@ -16,6 +16,7 @@ A extensão deve:
 
 ```text
 repo/
+├── .extnest.json
 ├── manifest.json
 ├── service-worker.js
 ├── ...
@@ -117,23 +118,34 @@ O bridge observa apenas `backupKeys`, aplica debounce e envia `extnest.config.ch
 
 `manifest.version` é usado para comparar instalação local com GitHub. Use `MAJOR.MINOR.PATCH` e incremente quando houver nova versão.
 
-## 12. Git
+## 12. Repositório
 
-ExtNest nunca deve sobrescrever uma working tree com alterações locais. O repo deve continuar Git válido.
+A raiz do repositório é a fonte distribuída pelo ExtNest. Instalação e atualização usam o ZIP oficial da branch pelo GitHub API, sem Git local.
 
-## 13. `.extnest.json` opcional
+## 13. `.extnest.json` obrigatório
+
+Todo repositório compatível deve possuir na raiz:
 
 ```json
 {
   "schema": 1,
+  "type": "extension",
   "displayName": "Minha Extensão",
   "entry": ".",
   "configBridge": true
 }
 ```
 
+Regras:
+- `schema` deve ser `1`;
+- `type` deve ser exatamente `"extension"`;
+- `entry` deve ser `"."`;
+- `configBridge` informa se a extensão implementa o Bridge;
+- sem esse arquivo válido, o repositório não aparece na lista do ExtNest e não pode ser adicionado manualmente.
+
 ## 14. Checklist para IA
 
+- [ ] `.extnest.json` obrigatório e válido.
 - [ ] Manifest V3.
 - [ ] `manifest.version` válido.
 - [ ] `manifest.key` fixa.
