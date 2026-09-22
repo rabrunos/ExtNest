@@ -1,4 +1,4 @@
-import { VIEWS, HELPER_INSTALLER_URL } from "../../shared/constants.js";
+import { VIEWS, HELPER_INSTALLER_URL, HELPER_RELEASE_API, HELPER_ASSET_NAME } from "../../shared/constants.js";
 import { nativeMessage } from "./api/native.js";
 import { state } from "./state.js";
 import { toast } from "./ui/toast.js";
@@ -18,6 +18,44 @@ const REQUIRED_NATIVE_PROTOCOL = 3;
 let helperInstallerDownloadId = null;
 let helperInstallerReady = false;
 let helperPolling = false;
+
+async function resolveHelperInstallerUrl() {
+  let response;
+
+  try {
+    response = await fetch(HELPER_RELEASE_API, {
+      headers: { "Accept": "application/vnd.github+json" },
+      cache: "no-store"
+    });
+  } catch {
+    throw new Error(
+      "Não foi possível verificar o instalador do ExtNest. Tente novamente em alguns instantes."
+    );
+  }
+
+  if (response.status === 404) {
+    throw new Error(
+      "O instalador do ExtNest ainda não foi publicado. A versão do Helper precisa ser gerada antes deste teste."
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      "Não foi possível verificar a versão do componente local do ExtNest."
+    );
+  }
+
+  const release = await response.json();
+  const asset = (release.assets || []).find(item => item.name === HELPER_ASSET_NAME);
+
+  if (!asset?.browser_download_url) {
+    throw new Error(
+      "A última versão do ExtNest ainda não contém o instalador do componente local."
+    );
+  }
+
+  return asset.browser_download_url || HELPER_INSTALLER_URL;
+}
 
 async function installedDevelopmentExtensions() {
   const all = await chrome.management.getAll();
@@ -220,9 +258,11 @@ function wire() {
     button.textContent = "Baixando...";
 
     try {
+      const installerUrl = await resolveHelperInstallerUrl();
+
       helperInstallerDownloadId = await new Promise((resolve, reject) => {
         chrome.downloads.download({
-          url: HELPER_INSTALLER_URL,
+          url: installerUrl,
           filename: "ExtNest/ExtNestHelperSetup.exe",
           saveAs: false
         }, id => {
