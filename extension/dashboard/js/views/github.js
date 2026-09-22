@@ -11,17 +11,6 @@ function esc(v = "") {
   }[c]));
 }
 
-async function openGithubAppAccess() {
-  const response = await nativeOk("github_installation_status");
-
-  if (response.installations?.length === 1 && response.installations[0].manage_url) {
-    await chrome.tabs.create({ url: response.installations[0].manage_url });
-    return;
-  }
-
-  await chrome.tabs.create({ url: response.install_url });
-}
-
 export function renderGitHub() {
   const connected = !!state.auth.github;
   document.getElementById("githubDisconnected").classList.toggle("hidden", connected);
@@ -45,8 +34,8 @@ export async function connectGitHub(refreshAll) {
   document.getElementById("deviceCode").textContent = begin.user_code;
   document.getElementById("deviceHint").textContent =
     `Expira em aproximadamente ${Math.ceil(begin.expires_in / 60)} minutos.`;
-  openModal("deviceModal");
 
+  openModal("deviceModal");
   await chrome.tabs.create({ url: begin.verification_uri });
 
   let interval = Math.max(5, Number(begin.interval || 5));
@@ -54,19 +43,12 @@ export async function connectGitHub(refreshAll) {
 
   while (!pollCancelled && Date.now() < expiresAt) {
     await new Promise(resolve => setTimeout(resolve, interval * 1000));
-
     const response = await nativeMessage("oauth_github_poll");
 
     if (response?.ok && response.connected) {
       closeModal("deviceModal");
       toast(`GitHub conectado como @${response.profile?.login || "usuário"}.`);
       await refreshAll();
-
-      const access = await nativeOk("github_installation_status");
-      if (!access.count) {
-        toast("Agora selecione no GitHub quais repositórios o ExtNest pode acessar.");
-        await chrome.tabs.create({ url: access.install_url });
-      }
       return;
     }
 
@@ -95,7 +77,6 @@ export async function disconnectGitHub(refreshAll) {
   await nativeOk("oauth_disconnect", { provider:"github" });
   state.repos = [];
   document.getElementById("repoList").innerHTML = "";
-  document.getElementById("githubInstallNotice").classList.add("hidden");
   await refreshAll();
 }
 
@@ -106,19 +87,7 @@ export async function loadRepos() {
 
   const response = await nativeOk("github_list_repos");
   state.repos = response.repos || [];
-
-  document.getElementById("githubInstallNotice").classList.toggle(
-    "hidden",
-    Number(response.count || 0) > 0
-  );
-
   renderRepoList();
-
-  if (!response.count) {
-    throw new Error(
-      "O GitHub App ExtNest ainda não foi instalado em nenhum repositório."
-    );
-  }
 }
 
 export function renderRepoList() {
@@ -132,7 +101,7 @@ export function renderRepoList() {
   );
 
   if (!visible.length) {
-    wrap.innerHTML = '<div class="hint">Nenhum repositório autorizado encontrado.</div>';
+    wrap.innerHTML = '<div class="hint">Nenhum repositório encontrado.</div>';
     return;
   }
 
@@ -145,11 +114,7 @@ export function renderRepoList() {
       <input type="checkbox" data-repo="${esc(repo.full_name)}" ${already ? "disabled" : ""}>
       <div class="grow">
         <strong>${esc(repo.full_name)}</strong>
-        <span>
-          ${esc(repo.description || "Sem descrição")} ·
-          ${esc(repo.default_branch || "main")} ·
-          acesso via ${esc(repo.installation_account || "GitHub App")}
-        </span>
+        <span>${esc(repo.description || "Sem descrição")} · ${esc(repo.default_branch || "main")}</span>
       </div>
       ${already ? '<span class="badge good">Adicionado</span>' : ""}
     `;
@@ -170,7 +135,6 @@ export async function addSelectedRepos(refreshAll) {
 
   for (const fullName of selected) {
     const repo = byName.get(fullName);
-
     await nativeOk("repo_register", {
       repo: fullName,
       branch: repo?.default_branch || "main"
@@ -178,16 +142,4 @@ export async function addSelectedRepos(refreshAll) {
   }
 
   await refreshAll();
-}
-
-export function wireGitHubAccessButtons() {
-  document.getElementById("manageGithubAccessBtn")
-    .addEventListener("click", () =>
-      openGithubAppAccess().catch(error => toast(error.message))
-    );
-
-  document.getElementById("installGithubAppBtn")
-    .addEventListener("click", () =>
-      openGithubAppAccess().catch(error => toast(error.message))
-    );
 }

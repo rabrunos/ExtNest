@@ -1,4 +1,3 @@
-import os
 from .paths import EXTENSIONS, DATA
 from .settings import get_settings, update_settings
 from .registry import list_extensions, find_by_extension_id, link_extension
@@ -8,7 +7,7 @@ from . import config_backup
 from .oauth import github, microsoft, google
 from .cloud import manager as cloud
 
-HOST_VERSION = "0.2.1"
+HOST_VERSION = "0.2.2"
 PROTOCOL_VERSION = 2
 
 def _auth_state():
@@ -51,14 +50,7 @@ def dispatch(request):
         return {"ok": True, **github.begin()}
 
     if op == "oauth_github_poll":
-        result = github.poll()
-        return {"ok": True, **result}
-
-    if op == "github_installation_status":
-        return {"ok": True, **github_api.installation_status()}
-
-    if op == "github_install_url":
-        return {"ok": True, "url": github.install_url()}
+        return {"ok": True, **github.poll()}
 
     if op == "oauth_interactive_login":
         provider = request.get("provider")
@@ -83,11 +75,7 @@ def dispatch(request):
         return {"ok": True}
 
     if op == "github_list_repos":
-        return {
-            "ok": True,
-            "repos": github_api.list_repos(),
-            **github_api.installation_status()
-        }
+        return {"ok": True, "repos": github_api.list_repos()}
 
     if op == "repo_register":
         item = repos.register_repo(request["repo"], request.get("branch") or "main")

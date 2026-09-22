@@ -1,9 +1,13 @@
 {
-  "schema": 2,
+  "schema": 3,
   "github": {
-    "type": "github_app",
-    "client_id": "Iv23liGji2rZOiSvippM",
-    "app_slug": "extnest"
+    "type": "oauth_app",
+    "client_id": "SET_GITHUB_OAUTH_CLIENT_ID",
+    "scopes": [
+      "repo",
+      "read:user",
+      "offline_access"
+    ]
   },
   "microsoft": {
     "client_id": "SET_MICROSOFT_ENTRA_CLIENT_ID",

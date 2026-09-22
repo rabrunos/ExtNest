@@ -6,8 +6,7 @@ import { wireModalClose, closeModal } from "./ui/modal.js";
 import { renderExtensions } from "./views/extensions.js";
 import {
   renderGitHub, connectGitHub, disconnectGitHub, loadRepos,
-  renderRepoList, addSelectedRepos, cancelGitHubPolling,
-  wireGitHubAccessButtons
+  renderRepoList, addSelectedRepos, cancelGitHubPolling
 } from "./views/github.js";
 import {
   renderCloud, connectCloud, disconnectCloud, setPrimaryCloud, syncCloudNow
@@ -56,10 +55,7 @@ export async function refreshState() {
 
   try {
     const response = await nativeMessage("state_get");
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Native Host indisponível.");
-    }
+    if (!response?.ok) throw new Error(response?.error || "Native Host indisponível.");
 
     const protocolVersion = Number(response.host?.protocol_version || 0);
     if (protocolVersion < REQUIRED_NATIVE_PROTOCOL) {
@@ -88,12 +84,10 @@ export async function refreshState() {
 
   const helperBanner = document.getElementById("helperBanner");
   helperBanner.classList.toggle("hidden", state.helperOnline);
-
   document.getElementById("helperBannerTitle").textContent =
     state.helperError.includes("desatualizado")
       ? "Native Host desatualizado."
       : "Native Host não encontrado.";
-
   document.getElementById("helperBannerMessage").textContent =
     state.helperError ||
     "O ExtNest precisa do helper local para Git e arquivos no AppData.";
@@ -108,22 +102,17 @@ export async function refreshState() {
 function setView(name) {
   document.querySelectorAll(".view").forEach(view => view.classList.add("hidden"));
   document.getElementById(`view-${name}`).classList.remove("hidden");
-
   document.querySelectorAll(".nav").forEach(button => {
     button.classList.toggle("active", button.dataset.view === name);
   });
 
   document.getElementById("viewTitle").textContent = VIEWS[name].title;
   document.getElementById("viewSubtitle").textContent = VIEWS[name].subtitle;
-  document.getElementById("headerActions").classList.toggle(
-    "hidden",
-    name !== "extensions"
-  );
+  document.getElementById("headerActions").classList.toggle("hidden", name !== "extensions");
 }
 
 function wire() {
   wireModalClose();
-  wireGitHubAccessButtons();
 
   document.querySelectorAll(".nav").forEach(button => {
     button.addEventListener("click", () => setView(button.dataset.view));
@@ -132,54 +121,40 @@ function wire() {
   document.getElementById("refreshBtn").addEventListener("click", () =>
     refreshState().then(() => toast("Atualizado."))
   );
-
-  document.getElementById("addRepoBtn").addEventListener("click", () =>
-    setView("github")
-  );
+  document.getElementById("addRepoBtn").addEventListener("click", () => setView("github"));
 
   document.getElementById("connectGithubBtn").addEventListener("click", () =>
     connectGitHub(refreshState).catch(error => toast(error.message))
   );
-
   document.getElementById("disconnectGithubBtn").addEventListener("click", () =>
     disconnectGitHub(refreshState).catch(error => toast(error.message))
   );
-
   document.getElementById("loadReposBtn").addEventListener("click", () =>
     loadRepos().catch(error => toast(error.message))
   );
-
   document.getElementById("repoSearch").addEventListener("input", renderRepoList);
-
   document.getElementById("addSelectedReposBtn").addEventListener("click", () =>
-    addSelectedRepos(refreshState)
-      .then(() => {
-        setView("extensions");
-        toast("Repositórios adicionados.");
-      })
-      .catch(error => toast(error.message))
+    addSelectedRepos(refreshState).then(() => {
+      setView("extensions");
+      toast("Repositórios adicionados.");
+    }).catch(error => toast(error.message))
   );
 
   document.getElementById("connectMicrosoftBtn").addEventListener("click", () =>
     connectCloud("microsoft", refreshState).catch(error => toast(error.message))
   );
-
   document.getElementById("disconnectMicrosoftBtn").addEventListener("click", () =>
     disconnectCloud("microsoft", refreshState).catch(error => toast(error.message))
   );
-
   document.getElementById("connectGoogleBtn").addEventListener("click", () =>
     connectCloud("google", refreshState).catch(error => toast(error.message))
   );
-
   document.getElementById("disconnectGoogleBtn").addEventListener("click", () =>
     disconnectCloud("google", refreshState).catch(error => toast(error.message))
   );
-
   document.getElementById("primaryCloud").addEventListener("change", () =>
     setPrimaryCloud().catch(error => toast(error.message))
   );
-
   document.getElementById("syncCloudNowBtn").addEventListener("click", () =>
     syncCloudNow(refreshState).catch(error => toast(error.message))
   );
@@ -191,31 +166,21 @@ function wire() {
   }
 
   document.getElementById("copyInstallPath").addEventListener("click", async () => {
-    await navigator.clipboard.writeText(
-      document.getElementById("installPath").textContent
-    );
+    await navigator.clipboard.writeText(document.getElementById("installPath").textContent);
     toast("Caminho copiado.");
   });
-
   document.getElementById("openExtensionsPage").addEventListener("click", () =>
     chrome.tabs.create({ url:"chrome://extensions/" })
   );
-
   document.getElementById("copyDeviceCode").addEventListener("click", async () => {
-    await navigator.clipboard.writeText(
-      document.getElementById("deviceCode").textContent
-    );
+    await navigator.clipboard.writeText(document.getElementById("deviceCode").textContent);
     toast("Código copiado.");
   });
 
-  document.querySelector('[data-close="deviceModal"]')
-    .addEventListener("click", cancelGitHubPolling);
-
+  document.querySelector('[data-close="deviceModal"]').addEventListener("click", cancelGitHubPolling);
   document.getElementById("modalBackdrop").addEventListener("click", () => {
     cancelGitHubPolling();
-    for (const id of ["installModal","deviceModal","waitModal"]) {
-      closeModal(id);
-    }
+    for (const id of ["installModal","deviceModal","waitModal"]) closeModal(id);
   });
 }
 

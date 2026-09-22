@@ -11,28 +11,13 @@ SESSION_FILE = AUTH / "github-device.json"
 def _config():
     return provider_config("github")
 
-def app_slug():
-    slug = (_config().get("app_slug") or "").strip()
-    if not slug or slug.startswith("SET_"):
-        raise RuntimeError(
-            "GitHub App slug ainda não configurado. "
-            "Preencha github.app_slug em native-host/oauth-clients.json."
-        )
-    return slug
-
-def install_url():
-    return f"https://github.com/apps/{app_slug()}/installations/new"
-
 def begin():
     config = _config()
-
-    # GitHub App user tokens do not use OAuth scopes. Their permissions are
-    # the intersection of the GitHub App permissions, the installation's
-    # selected repositories, and the authenticated user's own permissions.
     response = form_post(
         "https://github.com/login/device/code",
         {
-            "client_id": config["client_id"]
+            "client_id": config["client_id"],
+            "scope": " ".join(config.get("scopes") or ["repo", "read:user", "offline_access"])
         },
         headers={"Accept": "application/json"}
     )
@@ -76,12 +61,11 @@ def poll():
 
     save_tokens("github", response)
     SESSION_FILE.unlink(missing_ok=True)
-
     current = profiles.set("github", profile())
+
     return {
         "connected": True,
-        "profile": current,
-        "install_url": install_url()
+        "profile": current
     }
 
 def _refresh(tokens):
@@ -123,6 +107,7 @@ def profile():
             "User-Agent": "ExtNest/0.2"
         }
     )
+
     return {
         "login": user.get("login"),
         "name": user.get("name"),

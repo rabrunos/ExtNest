@@ -26,9 +26,10 @@ Este projeto é deliberadamente modular.
 - OAuth tokens ficam protegidos localmente por DPAPI.
 - Client IDs OAuth são identificadores públicos e ficam em `native-host/oauth-clients.json`.
 - Atualização de extensões gerenciadas é manual: detectar/notificar automaticamente, atualizar somente após ação do usuário.
-- **GitHub é somente leitura para o ExtNest.**
-- O código pode usar clone/fetch/pull, mas nunca implementar push/commit remoto pelo ExtNest.
-- Edição de código acontece fora do ExtNest, no repositório-fonte normal da extensão.
+- GitHub é fonte **somente de leitura/download** para o ExtNest.
+- Nunca implementar push, criação de commits remotos ou edição remota de código no ExtNest.
+- O escopo OAuth `repo` é tecnicamente read/write porque o GitHub não fornece read-only para código privado; portanto essa restrição deve ser reforçada no código.
+- Edição de código acontece fora do ExtNest, no repositório-fonte normal.
 
 ## IDs do ExtNest
 
@@ -50,4 +51,5 @@ E confirme:
 - Python compila;
 - JavaScript passa no `node --check`, se Node estiver instalado;
 - JSONs são válidos;
+- não existe `git push` no Native Host;
 - ZIP de Store coloca `manifest.json` na raiz.

@@ -73,6 +73,15 @@ def run_git(args, cwd=None, check=True):
         raise RuntimeError((proc.stderr or proc.stdout or "Erro Git").strip())
     return proc
 
+def _disable_push(path):
+    # Defense in depth: the operational clone managed by ExtNest is read-only.
+    # The OAuth token technically has broader repo scope because GitHub has no
+    # private-source read-only OAuth scope.
+    run_git(
+        ["remote", "set-url", "--push", "origin", "no_push://extnest-read-only"],
+        cwd=path
+    )
+
 def install(slug):
     item = find_by_slug(slug)
     if not item:
@@ -81,6 +90,7 @@ def install(slug):
     target = EXTENSIONS / slug
     if target.exists():
         if (target / ".git").exists():
+            _disable_push(target)
             return target
         shutil.rmtree(target)
 
@@ -91,6 +101,7 @@ def install(slug):
         f"https://github.com/{item['repo']}.git",
         str(target)
     ])
+    _disable_push(target)
     return target
 
 def update(slug):
@@ -106,6 +117,7 @@ def update(slug):
     if dirty:
         raise RuntimeError("Há alterações locais. Envie ou reverta antes de atualizar.")
 
+    _disable_push(target)
     run_git(["pull", "--ff-only", "origin", item.get("branch") or "main"], cwd=target)
     return target
 

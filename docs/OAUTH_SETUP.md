@@ -1,105 +1,93 @@
 # OAuth — configuração única do projeto
 
-Usuários finais do ExtNest não criam tokens nem Client IDs.
+## 1. GitHub
 
-Nós registramos uma integração oficial ExtNest em cada provedor uma vez e distribuímos apenas identificadores públicos.
-
-## 1. GitHub — configuração atual
-
-O ExtNest usa um **GitHub App**.
-
-### App criado
-
-Owner:
+O ExtNest usa um **OAuth App** porque queremos:
 
 ```text
-@rabrunos
+Conectar
+→ autorizar
+→ pronto
 ```
 
-Client ID:
+Sem instalar um GitHub App na conta.
+
+### Criar
+
+GitHub:
 
 ```text
-Iv23liGji2rZOiSvippM
+Settings
+→ Developer settings
+→ OAuth Apps
+→ New OAuth App
 ```
 
-O **App ID não é necessário** para o fluxo atual.
-
-Ainda falta preencher o slug em:
+Preencha:
 
 ```text
-native-host/oauth-clients.json
+Application name:
+ExtNest
+
+Homepage URL:
+https://github.com/rabrunos/ExtNest
+
+Application description:
+Gerenciador privado de extensões que usa o GitHub como fonte de código.
+
+Authorization callback URL:
+http://localhost
 ```
 
-### Repository permissions
-
-Configure somente:
+Ative:
 
 ```text
-Contents: Read-only
+Enable Device Flow
+Expire user access tokens
 ```
 
-Todo o restante deve continuar sem acesso, salvo Metadata implícito.
-
-O ExtNest é um gerenciador: ele baixa, lê e atualiza a cópia local. Ele não envia alterações de código ao GitHub.
-
-### User authorization
-
-- Request user authorization (OAuth) during installation: **desativado**
-- Enable Device Flow: **ativado**
-- Expire user authorization tokens: **ativado**
-
-### Webhook
-
-Desative **Active**.
-
-### Organization permissions
-
-Nenhuma.
-
-### Account permissions
-
-Nenhuma.
-
-### Where can this GitHub App be installed?
-
-Selecione:
+Depois clique em:
 
 ```text
-Any account
+Register application
 ```
 
-### App slug
-
-Na página do App, observe a URL:
+Copie somente:
 
 ```text
-https://github.com/apps/<slug>
+Client ID
 ```
 
-Copie apenas `<slug>` e coloque em:
+Não é necessário distribuir `Client secret` no ExtNest.
 
-```json
-"app_slug": "<slug>"
+### Scopes pedidos pelo aplicativo
+
+O ExtNest solicitará:
+
+```text
+repo
+read:user
+offline_access
 ```
 
-Não gere nem coloque no ExtNest:
-- Client secret;
-- private key.
+### Atenção
+
+O GitHub não oferece escopo OAuth de código privado somente leitura.
+
+Para ler conteúdo privado, `repo` é necessário e tecnicamente concede read/write.
+
+Mesmo assim, o ExtNest implementa exclusivamente operações de leitura/download e não possui push.
 
 ### Teste
 
-1. Atualize o repositório local.
-2. Recarregue o ExtNest.
-3. Abra a aba GitHub.
+1. Coloque o Client ID em `native-host/oauth-clients.json`.
+2. Atualize/reinicie o Native Host.
+3. Recarregue a extensão.
 4. Clique **Conectar com GitHub**.
-5. Autorize o Device Flow.
-6. O ExtNest abrirá a instalação do GitHub App se necessário.
-7. Escolha **Only select repositories**.
-8. Selecione um ou mais repositórios.
-9. Volte ao ExtNest.
-10. Clique **Carregar repositórios**.
-
-Somente repositórios autorizados ao GitHub App devem aparecer.
+5. Autorize o código no GitHub.
+6. Clique **Carregar repositórios**.
+7. Repositórios públicos e privados acessíveis pela conta devem aparecer.
+8. Não deve existir nenhuma etapa de instalação de GitHub App.
 
 ---
 

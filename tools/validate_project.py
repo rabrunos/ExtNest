@@ -54,6 +54,10 @@ try:
 except Exception as e:
     errors.append(f"Protocolo Native Host: {e}")
 
+repos_source = (ROOT / "native-host/extnest/repos.py").read_text(encoding="utf-8")
+if 'run_git(["push"' in repos_source or "run_git(['push'" in repos_source:
+    errors.append("ExtNest GitHub layer contains git push, which is forbidden.")
+
 node = shutil.which("node")
 if node:
     for file in (ROOT / "extension").rglob("*.js"):

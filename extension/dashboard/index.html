@@ -15,14 +15,12 @@
       <img src="../icons/icon48.png" alt="">
       <div><strong>ExtNest</strong><span>private extension nest</span></div>
     </div>
-
     <nav>
       <button class="nav active" data-view="extensions">Extensões <span id="extCount"></span></button>
       <button class="nav" data-view="github">GitHub</button>
       <button class="nav" data-view="cloud">Nuvem</button>
       <button class="nav" data-view="settings">Configurações</button>
     </nav>
-
     <div class="side-status">
       <div><span class="dot" id="helperDot"></span> Helper <b id="helperLabel">verificando…</b></div>
       <div><span class="dot" id="gitDot"></span> GitHub <b id="gitLabel">—</b></div>
@@ -48,7 +46,6 @@
         <span id="helperBannerMessage">O ExtNest precisa do helper local para Git e arquivos no AppData.</span>
       </div>
       <div id="extensionCards" class="cards"></div>
-
       <div class="section-title">
         <h2>Extensões de desenvolvimento detectadas</h2>
         <p>Extensões carregadas manualmente no Edge/Chrome que ainda não fazem parte do Vault.</p>
@@ -59,14 +56,14 @@
     <section class="view hidden" id="view-github">
       <div class="panel">
         <h2>GitHub</h2>
-        <p class="muted">GitHub App com acesso somente aos repositórios que você autorizar.</p>
+        <p class="muted">Conecte sua conta uma vez. O ExtNest usa o GitHub somente para leitura e download.</p>
 
         <div id="githubDisconnected">
           <button class="primary provider-connect" id="connectGithubBtn">
             <span class="provider-logo">GH</span>
             <span>Conectar com GitHub</span>
           </button>
-          <p class="hint">O ExtNest abre a autorização oficial do GitHub. Nenhum token é digitado ou copiado manualmente.</p>
+          <p class="hint">OAuth Device Flow. Não é necessário instalar um GitHub App nem copiar token.</p>
         </div>
 
         <div id="githubConnected" class="hidden">
@@ -76,29 +73,24 @@
               <strong id="githubUser">GitHub conectado</strong>
               <span id="githubAccountDetail"></span>
             </div>
-            <button class="secondary" id="manageGithubAccessBtn">Gerenciar acesso</button>
             <button class="secondary danger" id="disconnectGithubBtn">Desconectar</button>
           </div>
-          <p class="hint">“Gerenciar acesso” abre a instalação do GitHub App para adicionar/remover repositórios permitidos.</p>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
           <div>
-            <h2>Repositórios autorizados</h2>
-            <p class="muted">O GitHub só retorna repositórios aos quais o GitHub App ExtNest foi instalado. Depois você escolhe quais entram no Vault.</p>
+            <h2>Repositórios</h2>
+            <p class="muted">Selecione quais repositórios devem aparecer no ExtNest.</p>
           </div>
           <button class="secondary" id="loadReposBtn">Carregar repositórios</button>
         </div>
-        <div id="githubInstallNotice" class="banner hidden">
-          <strong>ExtNest ainda não tem acesso a nenhum repositório.</strong>
-          <span>Instale o GitHub App e escolha “Only select repositories”.</span>
-          <button class="secondary" id="installGithubAppBtn">Selecionar repositórios no GitHub</button>
-        </div>
-        <input id="repoSearch" class="search" placeholder="Filtrar repositórios autorizados…">
+        <input id="repoSearch" class="search" placeholder="Filtrar repositórios…">
         <div id="repoList" class="repo-list"></div>
-        <div class="panel-footer"><button class="primary" id="addSelectedReposBtn">Adicionar selecionados</button></div>
+        <div class="panel-footer">
+          <button class="primary" id="addSelectedReposBtn">Adicionar selecionados</button>
+        </div>
       </div>
     </section>
 
@@ -106,7 +98,6 @@
       <div class="panel">
         <h2>Backup na nuvem</h2>
         <p class="muted">O ExtNest usa somente o armazenamento reservado ao aplicativo.</p>
-
         <div class="provider-grid">
           <article class="provider-card">
             <div class="provider-card-head">
@@ -118,7 +109,7 @@
               <div><strong id="microsoftUser">Conectado</strong><span id="microsoftAccount"></span></div>
               <button class="secondary danger" id="disconnectMicrosoftBtn">Desconectar</button>
             </div>
-            <p class="hint">Usa o App Folder do OneDrive: <code>Apps/ExtNest</code>. O app só recebe acesso a esse espaço.</p>
+            <p class="hint">Usa o App Folder do OneDrive: <code>Apps/ExtNest</code>.</p>
           </article>
 
           <article class="provider-card">
@@ -131,10 +122,9 @@
               <div><strong id="googleUser">Conectado</strong><span id="googleAccount"></span></div>
               <button class="secondary danger" id="disconnectGoogleBtn">Desconectar</button>
             </div>
-            <p class="hint">Usa <code>drive.appdata</code>. Os dados ficam ocultos no Drive e não aparecem no Meu Drive.</p>
+            <p class="hint">Usa <code>drive.appdata</code>. Os dados não aparecem no Meu Drive.</p>
           </article>
         </div>
-
         <div class="cloud-primary">
           <label for="primaryCloud">Destino principal</label>
           <select id="primaryCloud">
