@@ -6,6 +6,8 @@ import subprocess
 import hashlib
 import base64
 import urllib.parse
+import sys
+from pathlib import Path
 
 from .paths import EXTENSIONS
 from .registry import find_by_slug, upsert_repo, get_registry, save_registry
@@ -121,10 +123,23 @@ def register_repo(repo, branch=None, account_id=None):
     return upsert_repo(item)
 
 def _git_exe():
+    if getattr(sys, "frozen", False):
+        root = Path(sys.executable).resolve().parent
+        for candidate in (
+            root / "git" / "cmd" / "git.exe",
+            root / "git" / "bin" / "git.exe",
+        ):
+            if candidate.exists():
+                return str(candidate)
+
     exe = shutil.which("git")
-    if not exe:
-        raise RuntimeError("Git não encontrado no PATH. Instale Git for Windows.")
-    return exe
+    if exe:
+        return exe
+
+    raise RuntimeError(
+        "Git interno do ExtNest Helper não foi encontrado. "
+        "Atualize ou reinstale o componente local."
+    )
 
 def _auth_header(account_id):
     token = github_oauth.access_token(account_id)
