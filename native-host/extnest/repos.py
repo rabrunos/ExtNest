@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 
 from .paths import EXTENSIONS, CACHE
 from .registry import find_by_slug, upsert_repo, get_registry, save_registry
-from .github_api import file_text, repo_info, archive_bytes
+from .github_api import file_text, repo_info, archive_bytes, extnest_metadata
 
 def normalize_repo(value):
     value = str(value or "").strip()
@@ -99,6 +99,13 @@ def register_repo(repo, branch=None, account_id=None):
 
     effective_branch = branch or info["default_branch"] or "main"
 
+    metadata = extnest_metadata(repo, effective_branch, effective_account_id)
+    if not metadata:
+        raise RuntimeError(
+            "Esse repositório não é compatível com ExtNest. "
+            "Adicione um .extnest.json válido na raiz."
+        )
+
     manifest = json.loads(file_text(
         repo,
         "manifest.json",
@@ -118,6 +125,7 @@ def register_repo(repo, branch=None, account_id=None):
         "account_id": effective_account_id,
         "source": "github",
         "transport": "archive",
+        "extnest": metadata,
         "expected_extension_id": expected_extension_id_from_key(manifest.get("key", ""))
     }
     return upsert_repo(item)
