@@ -55,40 +55,48 @@
 
     <section class="view hidden" id="view-github">
       <div class="panel">
-        <h2>GitHub</h2>
-        <p class="muted">Conecte sua conta uma vez. O ExtNest usa o GitHub somente para leitura e download.</p>
-        <div id="githubDisconnected">
-          <button class="primary provider-connect" id="connectGithubBtn">
-            <span class="provider-logo">GH</span>
-            <span>Conectar com GitHub</span>
-          </button>
-          <p class="hint">OAuth com PKCE e retorno automático. Não é necessário copiar código nem instalar GitHub App.</p>
-        </div>
-        <div id="githubConnected" class="hidden">
-          <div class="account-row">
-            <div class="avatar-placeholder" id="githubAvatar"></div>
-            <div>
-              <strong id="githubUser">GitHub conectado</strong>
-              <span id="githubAccountDetail"></span>
-            </div>
-            <button class="secondary danger" id="disconnectGithubBtn">Desconectar</button>
+        <div class="panel-head">
+          <div>
+            <h2>Contas GitHub</h2>
+            <p class="muted">Conecte quantas contas precisar. Cada repositório privado fica associado à conta que possui acesso.</p>
           </div>
+          <button class="primary" id="addGithubAccountBtn">Adicionar conta</button>
         </div>
+        <div class="account-list" id="githubAccountsList"></div>
+        <p class="hint">Os tokens de cada conta ficam separados e protegidos localmente pelo Windows DPAPI.</p>
       </div>
 
       <div class="panel">
         <div class="panel-head">
           <div>
-            <h2>Repositórios</h2>
-            <p class="muted">Selecione quais repositórios devem aparecer no ExtNest.</p>
+            <h2>Repositórios das contas</h2>
+            <p class="muted">Selecione uma conta para listar repositórios privados e públicos que ela consegue acessar.</p>
           </div>
-          <button class="secondary" id="loadReposBtn">Carregar repositórios</button>
+          <div class="github-toolbar">
+            <select id="githubAccountSelect">
+              <option value="">Selecione uma conta...</option>
+            </select>
+            <button class="secondary" id="loadReposBtn" disabled>Carregar repositórios</button>
+          </div>
         </div>
-        <input id="repoSearch" class="search" placeholder="Filtrar repositórios…">
-        <div id="repoList" class="repo-list"></div>
+        <input id="repoSearch" class="search" placeholder="Filtrar repositórios...">
+        <div id="repoList" class="repo-list">
+          <div class="hint">Nenhum repositório carregado.</div>
+        </div>
         <div class="panel-footer">
           <button class="primary" id="addSelectedReposBtn">Adicionar selecionados</button>
         </div>
+      </div>
+
+      <div class="panel">
+        <h2>Adicionar repositório público sem conta</h2>
+        <p class="muted">Para extensões públicas de terceiros, não é necessário conectar nenhuma conta GitHub.</p>
+        <div class="public-repo-form">
+          <input id="publicRepoInput" placeholder="owner/repo ou https://github.com/owner/repo">
+          <input id="publicRepoBranch" placeholder="branch opcional">
+          <button class="primary" id="addPublicRepoBtn">Adicionar</button>
+        </div>
+        <p class="hint">O ExtNest valida o repositório e exige um manifest.json Manifest V3 na raiz.</p>
       </div>
     </section>
 
