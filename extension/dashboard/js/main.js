@@ -34,6 +34,31 @@ function setDot(id, status) {
   if (status) el.classList.add(status);
 }
 
+function updateNativeDependentControls() {
+  const ids = [
+    "addGithubAccountBtn",
+    "loadReposBtn",
+    "addSelectedReposBtn",
+    "addPublicRepoBtn",
+    "connectMicrosoftBtn",
+    "connectGoogleBtn",
+    "syncCloudNowBtn"
+  ];
+
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !state.helperOnline;
+  }
+
+  if (state.helperOnline) {
+    const accountSelect = document.getElementById("githubAccountSelect");
+    const loadRepos = document.getElementById("loadReposBtn");
+    if (accountSelect && loadRepos) {
+      loadRepos.disabled = !accountSelect.value;
+    }
+  }
+}
+
 function updateSidebar() {
   document.getElementById("helperLabel").textContent =
     state.helperOnline ? "online" : "offline";
@@ -123,6 +148,7 @@ export async function refreshState() {
   }
 
   updateSidebar();
+  updateNativeDependentControls();
   await renderExtensions(refreshState);
   renderGitHub();
   renderCloud();
