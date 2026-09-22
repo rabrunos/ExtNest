@@ -35,7 +35,10 @@ As extensões gerenciadas podem vir de repositórios privados ou públicos. Repo
 - extração segura com bloqueio de caminhos fora da pasta da extensão;
 - atualização troca a pasta de forma transacional e restaura a anterior se falhar;
 - clones antigos com `.git` são migrados automaticamente na próxima instalação/atualização;
-- Git portátil removido do instalador, reduzindo drasticamente o tamanho do Helper.
+- Git portátil removido do instalador, reduzindo drasticamente o tamanho do Helper;
+- `.extnest.json` é o marcador obrigatório de compatibilidade;
+- a lista do GitHub mostra somente repositórios compatíveis;
+- o ExtNest carregado como extensão DEV pode atualizar o próprio checkout local pelo botão **Atualizar ExtNest**, sem terminal.
 
 ## v0.4
 
