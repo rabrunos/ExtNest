@@ -5,8 +5,10 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
+    paths:
+      - "native-host/**"
+      - "installer/**"
+      - ".github/workflows/build-helper.yml"
 
 permissions:
   contents: write
@@ -107,12 +109,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $manifest = Get-Content extension/manifest.json -Raw | ConvertFrom-Json
-          $tag = "v$($manifest.version)"
+          $protocol = Get-Content native-host/extnest/protocol.py -Raw
+          if ($protocol -notmatch 'HOST_VERSION = "([^"]+)"') {
+            throw "HOST_VERSION not found in protocol.py"
+          }
+
+          $helperVersion = $Matches[1]
+          $tag = "helper-v$helperVersion"
 
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --target "${{ github.sha }}" --title $tag --generate-notes
+            gh release create $tag --target "${{ github.sha }}" --title "ExtNest Helper v$helperVersion" --generate-notes
           }
 
           gh release upload $tag dist/ExtNestHelperSetup.exe --clobber
