@@ -4,18 +4,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_FILE = ROOT / "oauth-clients.json"
-PRIVATE_CONFIG_FILE = ROOT / "oauth-private.json"
+
+LOCAL_APP_DATA = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local"))
+STABLE_DEV_ROOT = LOCAL_APP_DATA / "ExtNest" / "NativeHostDev"
+
+PRIVATE_CONFIG_CANDIDATES = [
+    STABLE_DEV_ROOT / "oauth-private.json",
+    ROOT / "oauth-private.json",
+]
 
 def oauth_config():
     return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
 
 def private_oauth_config():
-    if not PRIVATE_CONFIG_FILE.exists():
-        return {}
-    try:
-        return json.loads(PRIVATE_CONFIG_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
+    for path in PRIVATE_CONFIG_CANDIDATES:
+        if not path.exists():
+            continue
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+    return {}
 
 def provider_config(name):
     config = oauth_config().get(name) or {}
@@ -40,5 +49,5 @@ def provider_secret(name, key="client_secret"):
 
     raise RuntimeError(
         f"Credencial privada de {name} ausente ({key}). "
-        "Configure native-host/oauth-private.json conforme docs/OAUTH_SETUP.md."
+        "Execute native-host/setup/set-dev-github-secret.ps1."
     )
