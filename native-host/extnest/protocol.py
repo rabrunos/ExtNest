@@ -7,7 +7,7 @@ from . import config_backup
 from .oauth import github, microsoft, google
 from .cloud import manager as cloud
 
-HOST_VERSION = "0.2.2"
+HOST_VERSION = "0.2.3"
 PROTOCOL_VERSION = 2
 
 def _auth_state():
@@ -46,15 +46,11 @@ def dispatch(request):
             }
         }
 
-    if op == "oauth_github_begin":
-        return {"ok": True, **github.begin()}
-
-    if op == "oauth_github_poll":
-        return {"ok": True, **github.poll()}
-
     if op == "oauth_interactive_login":
         provider = request.get("provider")
-        if provider == "microsoft":
+        if provider == "github":
+            profile = github.login()
+        elif provider == "microsoft":
             profile = microsoft.login()
         elif provider == "google":
             profile = google.login()
@@ -88,24 +84,14 @@ def dispatch(request):
 
     if op == "repo_install":
         path = repos.install(request["slug"])
-        return {
-            "ok": True,
-            "path": str(path),
-            **repos.status(request["slug"], config_backup.exists(request["slug"]))
-        }
+        return {"ok": True, "path": str(path), **repos.status(request["slug"], config_backup.exists(request["slug"]))}
 
     if op == "repo_update":
         repos.update(request["slug"])
-        return {
-            "ok": True,
-            **repos.status(request["slug"], config_backup.exists(request["slug"]))
-        }
+        return {"ok": True, **repos.status(request["slug"], config_backup.exists(request["slug"]))}
 
     if op == "repo_status":
-        return {
-            "ok": True,
-            **repos.status(request["slug"], config_backup.exists(request["slug"]))
-        }
+        return {"ok": True, **repos.status(request["slug"], config_backup.exists(request["slug"]))}
 
     if op == "repo_check_all":
         items = []
@@ -158,11 +144,8 @@ def dispatch(request):
 
     if op == "config_backup":
         wrapper = config_backup.backup(
-            request["slug"],
-            request.get("extension_id"),
-            request.get("extension_version"),
-            request.get("reason") or "manual",
-            request.get("payload")
+            request["slug"], request.get("extension_id"), request.get("extension_version"),
+            request.get("reason") or "manual", request.get("payload")
         )
         return {"ok": True, "saved_at": wrapper["saved_at"]}
 
@@ -170,10 +153,6 @@ def dispatch(request):
         backup = config_backup.restore(request["slug"])
         if not backup:
             return {"ok": False, "error": "Backup de configurações não encontrado."}
-        return {
-            "ok": True,
-            "payload": backup.get("payload"),
-            "saved_at": backup.get("saved_at")
-        }
+        return {"ok": True, "payload": backup.get("payload"), "saved_at": backup.get("saved_at")}
 
     raise RuntimeError(f"Operação desconhecida: {op}")
