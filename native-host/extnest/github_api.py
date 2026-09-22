@@ -1,6 +1,8 @@
-import urllib.parse, base64
+import base64
+import urllib.parse
+
 from .oauth import github as github_oauth
-from .http import api_json
+from .http import api_json, json_request, request
 
 API = "https://api.github.com"
 
@@ -8,21 +10,48 @@ def _headers():
     return {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2026-03-10",
-        "User-Agent": "ExtNest/0.2"
+        "User-Agent": "ExtNest/0.3"
     }
 
-def get(path):
-    return api_json(API + path, github_oauth.access_token(), headers=_headers())
+def _public_get(path):
+    return json_request(API + path, headers=_headers())
 
-def list_repos():
+def _account_get(path, account_id):
+    return api_json(
+        API + path,
+        github_oauth.access_token(account_id),
+        headers=_headers()
+    )
+
+def get(path, account_id=None):
+    if account_id:
+        return _account_get(path, account_id)
+    return _public_get(path)
+
+def repo_info(repo, account_id=None):
+    qrepo = "/".join(urllib.parse.quote(part, safe="") for part in repo.split("/", 1))
+    obj = get(f"/repos/{qrepo}", account_id)
+    return {
+        "full_name": obj["full_name"],
+        "private": bool(obj.get("private")),
+        "description": obj.get("description"),
+        "default_branch": obj.get("default_branch") or "main",
+        "html_url": obj.get("html_url")
+    }
+
+def list_repos(account_id):
+    if not account_id:
+        raise RuntimeError("Selecione uma conta GitHub.")
+
     repos = []
     page = 1
 
     while True:
-        batch = get(
+        batch = _account_get(
             f"/user/repos?per_page=100&page={page}"
             "&affiliation=owner,collaborator,organization_member"
-            "&sort=updated"
+            "&sort=updated",
+            account_id
         ) or []
 
         for repo in batch:
@@ -41,12 +70,24 @@ def list_repos():
 
     return repos
 
-def file_text(repo, path, branch="main"):
-    qpath = urllib.parse.quote(path, safe="/")
+def file_text(repo, path, branch="main", account_id=None):
+    if account_id:
+        qpath = urllib.parse.quote(path, safe="/")
+        qbranch = urllib.parse.quote(branch, safe="")
+        obj = _account_get(
+            f"/repos/{repo}/contents/{qpath}?ref={qbranch}",
+            account_id
+        )
+
+        if not obj or obj.get("encoding") != "base64":
+            raise RuntimeError(f"GitHub não retornou {path} em base64.")
+
+        return base64.b64decode(obj["content"]).decode("utf-8")
+
+    qrepo = "/".join(urllib.parse.quote(part, safe="") for part in repo.split("/", 1))
     qbranch = urllib.parse.quote(branch, safe="")
-    obj = get(f"/repos/{repo}/contents/{qpath}?ref={qbranch}")
+    qpath = urllib.parse.quote(path, safe="/")
+    url = f"https://raw.githubusercontent.com/{qrepo}/{qbranch}/{qpath}"
 
-    if not obj or obj.get("encoding") != "base64":
-        raise RuntimeError(f"GitHub não retornou {path} em base64.")
-
-    return base64.b64decode(obj["content"]).decode("utf-8")
+    with request(url, headers={"User-Agent": "ExtNest/0.3"}) as response:
+        return response.read().decode("utf-8")

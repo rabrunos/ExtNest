@@ -3,12 +3,12 @@ import urllib.parse
 
 from .tokens import save_tokens, load_tokens, clear_tokens, expires_soon
 from .loopback import pkce_pair
+from . import github_accounts
 from ..config import provider_config, provider_secret
 from ..paths import AUTH
 from ..jsonstore import load_json, save_json
 from ..http import form_post, api_json
 from ..timeutil import now_ts
-from . import profiles
 
 AUTH_URL = "https://github.com/login/oauth/authorize"
 TOKEN_URL = "https://github.com/login/oauth/access_token"
@@ -30,6 +30,34 @@ def _validate_redirect_uri(redirect_uri):
     if not parsed.path.rstrip("/").endswith("/github"):
         raise RuntimeError("Redirect URI do GitHub possui caminho inesperado.")
 
+def _profile_from_token(token):
+    user = api_json(
+        "https://api.github.com/user",
+        token,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2026-03-10",
+            "User-Agent": "ExtNest/0.3"
+        }
+    )
+
+    if not user or user.get("id") is None:
+        raise RuntimeError("GitHub não retornou a identidade da conta.")
+
+    return {
+        "account_id": str(user["id"]),
+        "login": user.get("login"),
+        "name": user.get("name"),
+        "avatar_url": user.get("avatar_url")
+    }
+
+def list_accounts():
+    return github_accounts.list_accounts()
+
+def default_account_id():
+    accounts = list_accounts()
+    return accounts[0]["account_id"] if len(accounts) == 1 else None
+
 def prepare(redirect_uri):
     _validate_redirect_uri(redirect_uri)
 
@@ -50,7 +78,8 @@ def prepare(redirect_uri):
         "scope": " ".join(config.get("scopes") or ["repo", "read:user", "offline_access"]),
         "state": state,
         "code_challenge": challenge,
-        "code_challenge_method": "S256"
+        "code_challenge_method": "S256",
+        "prompt": "select_account"
     })
 
     return {
@@ -112,18 +141,13 @@ def complete(callback_url):
     if response.get("error"):
         raise RuntimeError(response.get("error_description") or response["error"])
 
-    save_tokens("github", response)
-
-    try:
-        current = profile()
-    except Exception:
-        clear_tokens("github")
-        raise
-
+    profile = _profile_from_token(response["access_token"])
+    save_tokens("github", response, profile["account_id"])
+    account = github_accounts.upsert(profile)
     SESSION_FILE.unlink(missing_ok=True)
-    return profiles.set("github", current)
+    return account
 
-def _refresh(tokens):
+def _refresh(account_id, tokens):
     config = _config()
 
     response = form_post(
@@ -143,47 +167,40 @@ def _refresh(tokens):
     if "refresh_token" not in response and tokens.get("refresh_token"):
         response["refresh_token"] = tokens["refresh_token"]
 
-    return save_tokens("github", response)
+    return save_tokens("github", response, account_id)
 
-def access_token():
-    tokens = load_tokens("github")
+def access_token(account_id):
+    if not account_id:
+        raise RuntimeError("Conta GitHub não informada.")
+
+    account_id = str(account_id)
+    tokens = load_tokens("github", account_id)
     if not tokens:
-        raise RuntimeError("GitHub não conectado.")
+        raise RuntimeError("Essa conta GitHub não está conectada.")
 
     if expires_soon(tokens):
         if not tokens.get("refresh_token"):
-            raise RuntimeError("Sessão GitHub expirada. Conecte novamente.")
-        tokens = _refresh(tokens)
+            raise RuntimeError("Sessão GitHub expirada. Conecte a conta novamente.")
+        tokens = _refresh(account_id, tokens)
 
     return tokens["access_token"]
 
-def profile():
-    user = api_json(
-        "https://api.github.com/user",
-        access_token(),
-        headers={
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2026-03-10",
-            "User-Agent": "ExtNest/0.2"
-        }
-    )
+def refresh_profile(account_id):
+    token = access_token(account_id)
+    profile = _profile_from_token(token)
+    return github_accounts.upsert(profile)
 
-    return {
-        "login": user.get("login"),
-        "name": user.get("name"),
-        "avatar_url": user.get("avatar_url")
-    }
+def disconnect(account_id):
+    if not account_id:
+        raise RuntimeError("Conta GitHub não informada.")
 
-def connected_profile():
-    if not load_tokens("github"):
-        return None
+    account_id = str(account_id)
+    clear_tokens("github", account_id)
+    github_accounts.remove(account_id)
 
-    try:
-        return profiles.set("github", profile())
-    except Exception:
-        return profiles.get("github")
-
-def disconnect():
-    clear_tokens("github")
-    profiles.clear("github")
+def disconnect_all():
+    for account in list_accounts():
+        clear_tokens("github", account["account_id"])
+    for account in list_accounts():
+        github_accounts.remove(account["account_id"])
     SESSION_FILE.unlink(missing_ok=True)
