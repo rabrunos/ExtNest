@@ -19,6 +19,8 @@ WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+CloseApplications=no
+RestartApplications=no
 
 [Files]
 Source: "..\build\helper\ExtNestHost.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -30,8 +32,36 @@ Source: "..\build\helper\git\*"; DestDir: "{app}\git"; Flags: ignoreversion recu
 Root: HKCU; Subkey: "Software\Microsoft\Edge\NativeMessagingHosts\com.extnest.host"; ValueType: string; ValueName: ""; ValueData: "{app}\com.extnest.host.json"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Google\Chrome\NativeMessagingHosts\com.extnest.host"; ValueType: string; ValueName: ""; ValueData: "{app}\com.extnest.host.json"; Flags: uninsdeletekey
 
-[Run]
-Filename: "{cmd}"; Parameters: "/C echo {{^"name^":^"com.extnest.host^",^"description^":^"ExtNest Native Messaging Host^",^"path^":^"{app}\ExtNestHost.exe^",^"type^":^"stdio^",^"allowed_origins^":^[^"chrome-extension://econfanmnmmcggpgdflcipmdlmkcbiag/^"^]^}} > ^"{app}\com.extnest.host.json^""; Flags: runhidden waituntilterminated
-
 [UninstallDelete]
 Type: files; Name: "{app}\com.extnest.host.json"
+
+[Code]
+function JsonEscape(Value: String): String;
+begin
+  Result := StringChangeEx(Value, '\', '\\', True);
+  Result := StringChangeEx(Result, '"', '\"', True);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ManifestPath: String;
+  HostPath: String;
+  Json: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    ManifestPath := ExpandConstant('{app}\com.extnest.host.json');
+    HostPath := ExpandConstant('{app}\ExtNestHost.exe');
+
+    Json := '{' +
+      '"name":"com.extnest.host",' +
+      '"description":"ExtNest Native Messaging Host",' +
+      '"path":"' + JsonEscape(HostPath) + '",' +
+      '"type":"stdio",' +
+      '"allowed_origins":["chrome-extension://econfanmnmmcggpgdflcipmdlmkcbiag/"]' +
+      '}';
+
+    if not SaveStringToFile(ManifestPath, Json, False) then
+      RaiseException('Falha ao criar o manifest do ExtNest Native Host.');
+  end;
+end;
