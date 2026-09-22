@@ -1,9 +1,7 @@
 import { state } from "../state.js";
-import { nativeOk, nativeMessage } from "../api/native.js";
+import { nativeOk } from "../api/native.js";
 import { toast } from "../ui/toast.js";
 import { openModal, closeModal } from "../ui/modal.js";
-
-let pollCancelled = false;
 
 function esc(v = "") {
   return String(v).replace(/[&<>"']/g, c => ({
@@ -28,49 +26,18 @@ export function renderGitHub() {
 }
 
 export async function connectGitHub(refreshAll) {
-  const begin = await nativeOk("oauth_github_begin");
-  pollCancelled = false;
+  document.getElementById("waitTitle").textContent = "Conectar GitHub";
+  document.getElementById("waitMessage").textContent =
+    "Conclua o login e a autorização na página oficial do GitHub…";
+  openModal("waitModal");
 
-  document.getElementById("deviceCode").textContent = begin.user_code;
-  document.getElementById("deviceHint").textContent =
-    `Expira em aproximadamente ${Math.ceil(begin.expires_in / 60)} minutos.`;
-
-  openModal("deviceModal");
-  await chrome.tabs.create({ url: begin.verification_uri });
-
-  let interval = Math.max(5, Number(begin.interval || 5));
-  const expiresAt = Date.now() + Number(begin.expires_in || 900) * 1000;
-
-  while (!pollCancelled && Date.now() < expiresAt) {
-    await new Promise(resolve => setTimeout(resolve, interval * 1000));
-    const response = await nativeMessage("oauth_github_poll");
-
-    if (response?.ok && response.connected) {
-      closeModal("deviceModal");
-      toast(`GitHub conectado como @${response.profile?.login || "usuário"}.`);
-      await refreshAll();
-      return;
-    }
-
-    if (response?.status === "slow_down") {
-      interval += 5;
-      continue;
-    }
-
-    if (response?.status === "authorization_pending") continue;
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Falha na autenticação GitHub.");
-    }
+  try {
+    const response = await nativeOk("oauth_interactive_login", { provider:"github" });
+    toast(`GitHub conectado como @${response.profile?.login || "usuário"}.`);
+    await refreshAll();
+  } finally {
+    closeModal("waitModal");
   }
-
-  if (!pollCancelled) {
-    throw new Error("A autorização do GitHub expirou.");
-  }
-}
-
-export function cancelGitHubPolling() {
-  pollCancelled = true;
 }
 
 export async function disconnectGitHub(refreshAll) {
