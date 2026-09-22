@@ -4,11 +4,12 @@ from .registry import list_extensions, find_by_extension_id, link_extension
 from . import repos
 from . import github_api
 from . import config_backup
+from . import dev_update
 from .oauth import github, microsoft, google
 from .oauth import profiles
 from .cloud import manager as cloud
 
-HOST_VERSION = "0.5.0"
+HOST_VERSION = "0.5.1"
 PROTOCOL_VERSION = 3
 
 def _auth_state():
@@ -89,6 +90,9 @@ def dispatch(request):
             "ok": True,
             "repos": github_api.list_repos(request.get("account_id"))
         }
+
+    if op == "dev_self_update":
+        return {"ok": True, **dev_update.update()}
 
     if op == "repo_register":
         item = repos.register_repo(
