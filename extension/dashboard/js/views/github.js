@@ -25,12 +25,21 @@ export function renderGitHub() {
 }
 
 export async function connectGitHub(refreshAll) {
-  const redirectUri = chrome.identity.getRedirectURL("github");
+  const identity = globalThis.chrome?.identity ?? globalThis.browser?.identity;
+
+  if (!identity?.getRedirectURL || !identity?.launchWebAuthFlow) {
+    throw new Error(
+      "API de identidade do navegador ainda não está carregada. " +
+      "Recarregue o ExtNest em edge://extensions e abra o painel novamente."
+    );
+  }
+
+  const redirectUri = identity.getRedirectURL("github");
   const prepared = await nativeOk("oauth_github_prepare", {
     redirect_uri: redirectUri
   });
 
-  const callbackUrl = await chrome.identity.launchWebAuthFlow({
+  const callbackUrl = await identity.launchWebAuthFlow({
     url: prepared.authorization_url,
     interactive: true
   });
