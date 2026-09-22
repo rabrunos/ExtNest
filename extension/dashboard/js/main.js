@@ -75,6 +75,24 @@ async function installedDevelopmentExtensions() {
   );
 }
 
+function versionTuple(value) {
+  return String(value || "0")
+    .split(".")
+    .slice(0, 4)
+    .map(part => Number.parseInt(part, 10) || 0)
+    .concat([0,0,0,0])
+    .slice(0,4);
+}
+
+function versionLt(a, b) {
+  const av = versionTuple(a);
+  const bv = versionTuple(b);
+  for (let i = 0; i < 4; i++) {
+    if (av[i] !== bv[i]) return av[i] < bv[i];
+  }
+  return false;
+}
+
 function setDot(id, status) {
   const el = document.getElementById(id);
   el.classList.remove("good","bad","warn");
@@ -151,8 +169,19 @@ export async function refreshState() {
       );
     }
 
+    const appVersion = chrome.runtime.getManifest().version || "0.0.0";
+    const helperVersion = response.host?.version || "0.0.0";
+
+    if (versionLt(helperVersion, appVersion)) {
+      throw new Error(
+        "Native Host desatualizado (Helper " + helperVersion +
+        "; ExtNest " + appVersion + "). Atualize o componente local."
+      );
+    }
+
     state.helperOnline = true;
     state.helperError = "";
+    state.helperVersion = helperVersion;
     state.registry = response.registry || [];
     state.auth = response.auth || {
       github_accounts: [],
@@ -166,6 +195,7 @@ export async function refreshState() {
   } catch (error) {
     state.helperOnline = false;
     state.helperError = error?.message || "Native Host indisponível.";
+    state.helperVersion = "";
     state.registry = [];
     state.auth = {
       github_accounts: [],
