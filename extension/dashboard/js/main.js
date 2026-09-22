@@ -1,5 +1,5 @@
 import { VIEWS, HELPER_INSTALLER_URL, HELPER_RELEASE_API, HELPER_ASSET_NAME } from "../../shared/constants.js";
-import { nativeMessage } from "./api/native.js";
+import { nativeMessage, nativeOk } from "./api/native.js";
 import { state } from "./state.js";
 import { toast } from "./ui/toast.js";
 import { wireModalClose, closeModal } from "./ui/modal.js";
@@ -57,6 +57,15 @@ async function resolveHelperInstallerUrl() {
   return asset.browser_download_url || HELPER_INSTALLER_URL;
 }
 
+async function configureDevUpdate() {
+  try {
+    const self = await chrome.management.getSelf();
+    const button = document.getElementById("devUpdateBtn");
+    if (!button) return;
+    button.classList.toggle("hidden", self.installType !== "development");
+  } catch {}
+}
+
 async function installedDevelopmentExtensions() {
   const all = await chrome.management.getAll();
   return all.filter(item =>
@@ -80,7 +89,8 @@ function updateNativeDependentControls() {
     "addPublicRepoBtn",
     "connectMicrosoftBtn",
     "connectGoogleBtn",
-    "syncCloudNowBtn"
+    "syncCloudNowBtn",
+    "devUpdateBtn"
   ];
 
   for (const id of ids) {
@@ -238,6 +248,32 @@ function wire() {
     refreshState().then(() => toast("Atualizado."))
   );
 
+  document.getElementById("devUpdateBtn").addEventListener("click", async () => {
+    const button = document.getElementById("devUpdateBtn");
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = "Atualizando...";
+
+    try {
+      const result = await nativeOk("dev_self_update");
+
+      if (!result.changed) {
+        button.textContent = original;
+        toast("ExtNest DEV já está atualizado.");
+        return;
+      }
+
+      button.textContent = "Recarregando...";
+      toast("ExtNest atualizado. Recarregando a extensão...");
+      setTimeout(() => chrome.runtime.reload(), 600);
+    } catch (error) {
+      button.textContent = original;
+      toast(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   document.getElementById("installHelperBtn").addEventListener("click", async () => {
     const button = document.getElementById("installHelperBtn");
 
@@ -381,4 +417,5 @@ function wire() {
 }
 
 wire();
+configureDevUpdate();
 refreshState().catch(error => toast(error.message));
