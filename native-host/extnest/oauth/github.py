@@ -78,7 +78,8 @@ def prepare(redirect_uri):
         "scope": " ".join(config.get("scopes") or ["repo", "read:user", "offline_access"]),
         "state": state,
         "code_challenge": challenge,
-        "code_challenge_method": "S256"
+        "code_challenge_method": "S256",
+        "prompt": "select_account"
     })
 
     return {
