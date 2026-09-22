@@ -111,6 +111,7 @@ except Exception as e:
 
 repos_source = (ROOT / "native-host/extnest/repos.py").read_text(encoding="utf-8")
 github_source = (ROOT / "native-host/extnest/github_api.py").read_text(encoding="utf-8")
+dev_update_source = (ROOT / "native-host/extnest/dev_update.py").read_text(encoding="utf-8")
 workflow_source = (ROOT / ".github/workflows/build-helper.yml").read_text(encoding="utf-8")
 installer_source = (ROOT / "installer/ExtNestHelper.iss").read_text(encoding="utf-8")
 
@@ -120,6 +121,15 @@ for forbidden in ["run_git(", "shutil.which(\"git\")", "git clone", "git pull"]:
 
 if "archive_bytes" not in github_source or "_safe_extract_zip" not in repos_source:
     errors.append("Instalação por ZIP/API do GitHub não está implementada.")
+
+if 'EXTNEST_MARKER = ".extnest.json"' not in github_source or "extnest_metadata" not in github_source:
+    errors.append("Filtro obrigatório por .extnest.json não está implementado.")
+
+if "dev_self_update" not in (ROOT / "native-host/extnest/protocol.py").read_text(encoding="utf-8"):
+    errors.append("Auto-update DEV do ExtNest não está roteado no Native Host.")
+
+if '"pull", "--ff-only"' not in dev_update_source:
+    errors.append("Auto-update DEV não usa atualização fast-forward segura.")
 
 if "Bundle portable Git" in workflow_source:
     errors.append("Workflow ainda empacota Git portátil.")
@@ -174,6 +184,10 @@ for required in [
 
 if "HELPER_INSTALLER_URL" not in constants_js:
     errors.append("URL do instalador do Helper não está definida.")
+if "dev_self_update" not in main_js:
+    errors.append("Dashboard não contém auto-update DEV.")
+if "versionLt(helperVersion, appVersion)" not in main_js:
+    errors.append("Dashboard não valida versão mínima do Helper.")
 if int(manifest.get("manifest_version",0)) != 3:
     errors.append("Manifest não é V3.")
 if "identity" not in manifest.get("permissions", []):
