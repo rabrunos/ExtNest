@@ -1,10 +1,12 @@
 import base64
+import json
 import urllib.parse
 
 from .oauth import github as github_oauth
 from .http import api_json, api_bytes, json_request, request
 
 API = "https://api.github.com"
+EXTNEST_MARKER = ".extnest.json"
 
 def _headers():
     return {
@@ -39,6 +41,30 @@ def repo_info(repo, account_id=None):
         "html_url": obj.get("html_url")
     }
 
+def _validate_extnest_metadata(data):
+    if not isinstance(data, dict):
+        return None
+    if int(data.get("schema") or 0) != 1:
+        return None
+    if data.get("type") != "extension":
+        return None
+    if (data.get("entry") or ".") != ".":
+        return None
+    return {
+        "schema": 1,
+        "type": "extension",
+        "displayName": data.get("displayName"),
+        "entry": ".",
+        "configBridge": bool(data.get("configBridge"))
+    }
+
+def extnest_metadata(repo, branch="main", account_id=None):
+    try:
+        raw = file_text(repo, EXTNEST_MARKER, branch, account_id)
+        return _validate_extnest_metadata(json.loads(raw))
+    except Exception:
+        return None
+
 def list_repos(account_id):
     if not account_id:
         raise RuntimeError("Selecione uma conta GitHub.")
@@ -55,17 +81,21 @@ def list_repos(account_id):
         ) or []
 
         for repo in batch:
+            branch = repo.get("default_branch") or "main"
+            metadata = extnest_metadata(repo["full_name"], branch, account_id)
+            if not metadata:
+                continue
             repos.append({
                 "full_name": repo["full_name"],
                 "private": bool(repo.get("private")),
                 "description": repo.get("description"),
-                "default_branch": repo.get("default_branch") or "main",
-                "html_url": repo.get("html_url")
+                "default_branch": branch,
+                "html_url": repo.get("html_url"),
+                "extnest": metadata
             })
 
         if len(batch) < 100 or page >= 10:
             break
-
         page += 1
 
     return repos
