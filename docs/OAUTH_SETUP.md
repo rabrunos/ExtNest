@@ -4,66 +4,53 @@ Usuários finais do ExtNest não criam tokens nem Client IDs.
 
 Nós registramos uma integração oficial ExtNest em cada provedor uma vez e distribuímos apenas identificadores públicos.
 
-## 1. GitHub — fazer primeiro
+## 1. GitHub — configuração atual
 
-Crie um **GitHub App**, não um OAuth App.
+O ExtNest usa um **GitHub App**.
 
-Caminho:
+### App criado
 
-```text
-GitHub
-→ Settings
-→ Developer settings
-→ GitHub Apps
-→ New GitHub App
-```
-
-### Campos principais
-
-Use:
+Owner:
 
 ```text
-GitHub App name:
-ExtNest
+@rabrunos
 ```
 
-Se o nome estiver indisponível, use algo como:
+Client ID:
 
 ```text
-ExtNest by rabrunos
+Iv23liGji2rZOiSvippM
 ```
 
-Homepage URL:
+O **App ID não é necessário** para o fluxo atual.
+
+Ainda falta preencher o slug em:
 
 ```text
-https://github.com/rabrunos/ExtNest
+native-host/oauth-clients.json
 ```
-
-Callback URL:
-
-Pode ficar vazio para o fluxo Device Flow. O ExtNest não usa Web Application Flow no GitHub.
-
-### User authorization
-
-- Request user authorization (OAuth) during installation: **desativado**
-- Enable Device Flow: **ativado**
-- User-to-server token expiration: **ativado**
-
-### Webhook
-
-Desative **Active**.
-
-O ExtNest não precisa de webhook.
 
 ### Repository permissions
 
 Configure somente:
 
 ```text
-Contents: Read and write
+Contents: Read-only
 ```
 
-Não habilite permissões adicionais sem necessidade.
+Todo o restante deve continuar sem acesso, salvo Metadata implícito.
+
+O ExtNest é um gerenciador: ele baixa, lê e atualiza a cópia local. Ele não envia alterações de código ao GitHub.
+
+### User authorization
+
+- Request user authorization (OAuth) during installation: **desativado**
+- Enable Device Flow: **ativado**
+- Expire user authorization tokens: **ativado**
+
+### Webhook
+
+Desative **Active**.
 
 ### Organization permissions
 
@@ -81,51 +68,36 @@ Selecione:
 Any account
 ```
 
-Isso torna o GitHub App instalável por qualquer usuário do ExtNest. Não significa publicar no GitHub Marketplace.
+### App slug
 
-### Após criar
-
-Na página do GitHub App copie:
-
-1. **Client ID** — é diferente do App ID.
-2. O **slug** do aplicativo, visível na URL:
-   `https://github.com/apps/<slug>`
-
-Preencha:
+Na página do App, observe a URL:
 
 ```text
-native-host/oauth-clients.json
+https://github.com/apps/<slug>
 ```
 
-Exemplo:
+Copie apenas `<slug>` e coloque em:
 
 ```json
-{
-  "github": {
-    "type": "github_app",
-    "client_id": "Iv1.xxxxxxxxxxxxxxxx",
-    "app_slug": "extnest"
-  }
-}
+"app_slug": "<slug>"
 ```
 
 Não gere nem coloque no ExtNest:
 - Client secret;
 - private key.
 
-O ExtNest é um native/public client e usa Device Flow.
-
 ### Teste
 
-1. Recarregue o ExtNest.
-2. Abra GitHub.
-3. Clique **Conectar com GitHub**.
-4. Autorize o código.
-5. O ExtNest abrirá a instalação do GitHub App caso ainda não exista.
-6. Selecione **Only select repositories**.
-7. Marque um ou mais repositórios.
-8. Volte ao ExtNest.
-9. Clique **Carregar repositórios**.
+1. Atualize o repositório local.
+2. Recarregue o ExtNest.
+3. Abra a aba GitHub.
+4. Clique **Conectar com GitHub**.
+5. Autorize o Device Flow.
+6. O ExtNest abrirá a instalação do GitHub App se necessário.
+7. Escolha **Only select repositories**.
+8. Selecione um ou mais repositórios.
+9. Volte ao ExtNest.
+10. Clique **Carregar repositórios**.
 
 Somente repositórios autorizados ao GitHub App devem aparecer.
 
@@ -135,12 +107,8 @@ Somente repositórios autorizados ao GitHub App devem aparecer.
 
 Fazer depois que a integração GitHub estiver validada.
 
-Os placeholders continuam em `native-host/oauth-clients.json`.
-
 ---
 
 ## 3. Google Drive
 
 Fazer depois que a integração GitHub estiver validada.
-
-Os placeholders continuam em `native-host/oauth-clients.json`.

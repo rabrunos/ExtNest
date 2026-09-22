@@ -2,21 +2,39 @@
 
 ## Modelo adotado
 
-O ExtNest usa um **GitHub App público**, não um OAuth App genérico.
+O ExtNest usa um **GitHub App público**.
 
-Isso permite duas camadas de controle:
+Existem duas camadas de controle:
 
 1. No GitHub, o usuário instala o GitHub App ExtNest somente nos repositórios que quiser permitir.
 2. Dentro do ExtNest, o usuário escolhe quais desses repositórios autorizados realmente entram no Vault.
 
-O token não recebe o escopo amplo `repo`.
+## Regra de segurança
+
+O GitHub é **somente leitura para o ExtNest**.
+
+O ExtNest pode:
+- descobrir repositórios autorizados;
+- ler `manifest.json`;
+- baixar/clonar código;
+- executar fetch/pull;
+- verificar versões.
+
+O ExtNest não pode:
+- push;
+- criar commits remotos;
+- alterar arquivos no GitHub;
+- criar branches;
+- editar configurações do repositório.
+
+Qualquer edição de código deve ser feita fora do ExtNest, usando o repositório-fonte normal da extensão.
 
 ## Permissões do GitHub App
 
 Repository permissions:
 
 ```text
-Contents: Read and write
+Contents: Read-only
 ```
 
 Metadata read é implícito.
@@ -27,9 +45,11 @@ Não são necessários:
 - Actions;
 - Administration;
 - Members;
-- Secrets.
+- Secrets;
+- Workflows;
+- Webhooks.
 
-`Contents: write` é escolhido porque o roadmap inclui salvar alterações/push pelo ExtNest. Para clone/pull apenas, read seria suficiente.
+`Contents: read` é suficiente para clone/fetch/pull autenticado. Write só seria necessário para push, que está fora do escopo do ExtNest.
 
 ## Onde o App pode ser instalado
 
@@ -61,9 +81,9 @@ Não há `client_secret` no ExtNest.
 
 ## Token expiration
 
-Mantenha **User-to-server token expiration** ativado.
+Mantenha **Expire user authorization tokens** ativado.
 
-O GitHub App entrega access token curto e refresh token. Como o token original foi criado por Device Flow, o refresh não exige client secret.
+O GitHub App entrega access token e refresh token. Como o token original foi criado por Device Flow, o ExtNest não precisa armazenar client secret.
 
 ## Instalação nos repositórios
 
@@ -86,11 +106,25 @@ GET /user/installations
 GET /user/installations/{installation_id}/repositories
 ```
 
-O ExtNest não usa mais `GET /user/repos` para montar a lista.
+O ExtNest não usa `GET /user/repos` para montar a lista.
 
 ## Git
 
-O user access token do GitHub App é usado como credencial HTTP temporária para clone/pull/push.
+O user access token do GitHub App é usado como credencial HTTP temporária para operações somente leitura.
+
+Permitido:
+
+```text
+clone
+fetch
+pull
+```
+
+Não permitido pelo desenho do produto:
+
+```text
+push
+```
 
 O remote continua limpo:
 
@@ -108,8 +142,8 @@ Nunca gravar token na URL do remote.
 {
   "github": {
     "type": "github_app",
-    "client_id": "Iv1....",
-    "app_slug": "extnest"
+    "client_id": "Iv23liGji2rZOiSvippM",
+    "app_slug": "PREENCHER"
   }
 }
 ```
@@ -122,4 +156,4 @@ Nunca commitar:
 - access tokens;
 - refresh tokens.
 
-O ExtNest, como native/public client, não precisa de private key nem installation access tokens.
+O ExtNest não precisa de private key nem installation access tokens para esse fluxo.

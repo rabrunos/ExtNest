@@ -26,6 +26,9 @@ Este projeto é deliberadamente modular.
 - OAuth tokens ficam protegidos localmente por DPAPI.
 - Client IDs OAuth são identificadores públicos e ficam em `native-host/oauth-clients.json`.
 - Atualização de extensões gerenciadas é manual: detectar/notificar automaticamente, atualizar somente após ação do usuário.
+- **GitHub é somente leitura para o ExtNest.**
+- O código pode usar clone/fetch/pull, mas nunca implementar push/commit remoto pelo ExtNest.
+- Edição de código acontece fora do ExtNest, no repositório-fonte normal da extensão.
 
 ## IDs do ExtNest
 

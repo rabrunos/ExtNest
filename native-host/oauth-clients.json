@@ -2,7 +2,7 @@
   "schema": 2,
   "github": {
     "type": "github_app",
-    "client_id": "SET_GITHUB_APP_CLIENT_ID",
+    "client_id": "Iv23liGji2rZOiSvippM",
     "app_slug": "SET_GITHUB_APP_SLUG"
   },
   "microsoft": {
