@@ -1,5 +1,5 @@
 #define MyAppName "ExtNest Helper"
-#define MyAppVersion "0.5.0"
+#define MyAppVersion "0.5.1"
 #define MyAppPublisher "ExtNest"
 #define MyAppExeName "ExtNestHost.exe"
 
