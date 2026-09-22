@@ -2,7 +2,7 @@ import base64
 import urllib.parse
 
 from .oauth import github as github_oauth
-from .http import api_json, json_request
+from .http import api_json, api_bytes, json_request, request
 
 API = "https://api.github.com"
 
@@ -10,7 +10,7 @@ def _headers():
     return {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2026-03-10",
-        "User-Agent": "ExtNest/0.3"
+        "User-Agent": "ExtNest/0.5"
     }
 
 def _public_get(path):
@@ -71,24 +71,35 @@ def list_repos(account_id):
     return repos
 
 def file_text(repo, path, branch="main", account_id=None):
+    qpath = urllib.parse.quote(path, safe="/")
+    qbranch = urllib.parse.quote(branch, safe="")
+
     if account_id:
-        qpath = urllib.parse.quote(path, safe="/")
-        qbranch = urllib.parse.quote(branch, safe="")
         obj = _account_get(
             f"/repos/{repo}/contents/{qpath}?ref={qbranch}",
             account_id
         )
-
-        if not obj or obj.get("encoding") != "base64":
-            raise RuntimeError(f"GitHub não retornou {path} em base64.")
-
-        return base64.b64decode(obj["content"]).decode("utf-8")
-
-    qpath = urllib.parse.quote(path, safe="/")
-    qbranch = urllib.parse.quote(branch, safe="")
-    obj = _public_get(f"/repos/{repo}/contents/{qpath}?ref={qbranch}")
+    else:
+        obj = _public_get(f"/repos/{repo}/contents/{qpath}?ref={qbranch}")
 
     if not obj or obj.get("encoding") != "base64":
         raise RuntimeError(f"GitHub não retornou {path} em base64.")
 
     return base64.b64decode(obj["content"]).decode("utf-8")
+
+def archive_bytes(repo, ref="main", account_id=None):
+    qrepo = "/".join(urllib.parse.quote(part, safe="") for part in repo.split("/", 1))
+    qref = urllib.parse.quote(ref, safe="")
+    url = f"{API}/repos/{qrepo}/zipball/{qref}"
+    headers = _headers()
+
+    if account_id:
+        return api_bytes(
+            url,
+            github_oauth.access_token(account_id),
+            headers=headers,
+            timeout=120
+        )
+
+    with request(url, headers=headers, timeout=120) as response:
+        return response.read()

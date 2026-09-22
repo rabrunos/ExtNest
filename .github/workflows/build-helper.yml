@@ -86,13 +86,6 @@ jobs:
             [System.Text.UTF8Encoding]::new($false)
           )
 
-      - name: Bundle portable Git
-        shell: pwsh
-        run: |
-          $git = (Get-Command git.exe).Source
-          $gitRoot = Split-Path -Parent (Split-Path -Parent $git)
-          Copy-Item $gitRoot build/helper/git -Recurse
-
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup -y --no-progress

@@ -1,5 +1,5 @@
 #define MyAppName "ExtNest Helper"
-#define MyAppVersion "0.4.1"
+#define MyAppVersion "0.5.0"
 #define MyAppPublisher "ExtNest"
 #define MyAppExeName "ExtNestHost.exe"
 
@@ -27,7 +27,6 @@ Source: "..\build\helper\ExtNestHost.exe"; DestDir: "{app}"; Flags: ignoreversio
 Source: "..\build\helper\oauth-clients.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\helper\oauth-private.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\helper\com.extnest.host.template.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\build\helper\git\*"; DestDir: "{app}\git"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Edge\NativeMessagingHosts\com.extnest.host"; ValueType: string; ValueName: ""; ValueData: "{app}\com.extnest.host.json"; Flags: uninsdeletekey

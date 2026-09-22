@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ExtNest",
   "short_name": "ExtNest",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Gerenciador privado de extensões com GitHub, AppData e backup de configurações em OneDrive/Google Drive.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxNIiHg7hwaraXupTtLHfUecvP3+LcA7FA0yKRvFXgmBudOPC7OTxvFUEXPjHN/mZUiY9zLnY1RcFCd03D0P3IK1b6QcJkRkiutVOaA4KjjTddHNQFYHHfeh6d/qBp6X5NG27/Pdr5zpet/sReqkSRLoim6mFhg5tXAJVuGHz/vQzCOQCQK2ZmvPROhYqRV7M7aahz66VkZOFGpy84AdLtoO+rx892BCmtPsJIXjLCNSWzi+xJQeCRpihkS2T0VeTweU1Vf7tBfLywAxybJJW9QiNvAJklGK9L8fUDfVSt8P9qkbWJRv8j3Am58b3cL6/iVsPU9f9VVwe+l87fSHrjQIDAQAB",
   "permissions": [

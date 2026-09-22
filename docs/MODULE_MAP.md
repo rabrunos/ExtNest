@@ -26,7 +26,7 @@ Leia:
 - `native-host/extnest/cloud/google_drive.py`
 - `extension/dashboard/js/views/cloud.js`
 
-## Git / instalação / atualização de extensões
+## GitHub / instalação / atualização de extensões
 
 Leia:
 - `native-host/extnest/repos.py`

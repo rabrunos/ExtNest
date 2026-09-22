@@ -1,18 +1,19 @@
+import base64
+import hashlib
+import io
+import json
 import os
 import re
-import json
 import shutil
 import subprocess
-import hashlib
-import base64
+import tempfile
 import urllib.parse
-import sys
-from pathlib import Path
+import zipfile
+from pathlib import Path, PurePosixPath
 
-from .paths import EXTENSIONS
+from .paths import EXTENSIONS, CACHE
 from .registry import find_by_slug, upsert_repo, get_registry, save_registry
-from .github_api import file_text, repo_info
-from .oauth import github as github_oauth
+from .github_api import file_text, repo_info, archive_bytes
 
 def normalize_repo(value):
     value = str(value or "").strip()
@@ -40,7 +41,6 @@ def normalize_repo(value):
     return f"{owner}/{name}"
 
 def sanitize_slug(repo):
-    # owner--repo avoids collisions between repositories with the same name.
     return re.sub(r"[^a-zA-Z0-9._-]+", "-", repo.replace("/", "--")).strip("-").lower()
 
 def expected_extension_id_from_key(key_b64):
@@ -92,7 +92,6 @@ def register_repo(repo, branch=None, account_id=None):
             ) from error
         raise
 
-    # Public repositories deliberately do not retain/use an account token.
     effective_account_id = str(account_id) if info["private"] and account_id else None
 
     if info["private"] and not effective_account_id:
@@ -118,81 +117,126 @@ def register_repo(repo, branch=None, account_id=None):
         "private": bool(info["private"]),
         "account_id": effective_account_id,
         "source": "github",
+        "transport": "archive",
         "expected_extension_id": expected_extension_id_from_key(manifest.get("key", ""))
     }
     return upsert_repo(item)
 
-def _git_exe():
-    if getattr(sys, "frozen", False):
-        root = Path(sys.executable).resolve().parent
-        for candidate in (
-            root / "git" / "cmd" / "git.exe",
-            root / "git" / "bin" / "git.exe",
-        ):
-            if candidate.exists():
-                return str(candidate)
+def _safe_extract_zip(blob, destination):
+    destination = Path(destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    destination_resolved = destination.resolve()
 
-    exe = shutil.which("git")
-    if exe:
-        return exe
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(blob))
+    except zipfile.BadZipFile as error:
+        raise RuntimeError("O GitHub retornou um arquivo ZIP inválido.") from error
 
-    raise RuntimeError(
-        "Git interno do ExtNest Helper não foi encontrado. "
-        "Atualize ou reinstale o componente local."
+    with archive:
+        files = [
+            info for info in archive.infolist()
+            if info.filename and not info.is_dir()
+        ]
+
+        if not files:
+            raise RuntimeError("O ZIP do repositório está vazio.")
+
+        roots = set()
+        parsed = []
+
+        for info in files:
+            if "\\" in info.filename:
+                raise RuntimeError("O ZIP do repositório contém caminho inválido.")
+
+            parts = PurePosixPath(info.filename).parts
+            if len(parts) < 2:
+                continue
+
+            roots.add(parts[0])
+            parsed.append((info, parts))
+
+        if len(roots) != 1:
+            raise RuntimeError("Estrutura inesperada no ZIP retornado pelo GitHub.")
+
+        root = next(iter(roots))
+
+        for info, parts in parsed:
+            if parts[0] != root:
+                raise RuntimeError("Estrutura inconsistente no ZIP do repositório.")
+
+            relative_parts = parts[1:]
+            if not relative_parts:
+                continue
+
+            if any(part in {"", ".", ".."} for part in relative_parts):
+                raise RuntimeError("O ZIP do repositório contém caminho inseguro.")
+
+            target = destination.joinpath(*relative_parts)
+            target_resolved = target.resolve()
+
+            try:
+                target_resolved.relative_to(destination_resolved)
+            except ValueError as error:
+                raise RuntimeError("O ZIP tentou gravar fora da pasta da extensão.") from error
+
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(info, "r") as source, target.open("wb") as output:
+                shutil.copyfileobj(source, output)
+
+def _deploy_archive(item):
+    blob = archive_bytes(
+        item["repo"],
+        item.get("branch") or "main",
+        item.get("account_id")
     )
 
-def _auth_header(account_id):
-    token = github_oauth.access_token(account_id)
-    raw = base64.b64encode(f"x-access-token:{token}".encode("utf-8")).decode("ascii")
-    return f"Authorization: Basic {raw}"
+    target = EXTENSIONS / item["slug"]
+    backup = EXTENSIONS / f".{item['slug']}.previous"
 
-def run_git(args, cwd=None, check=True, account_id=None):
-    cmd = [_git_exe()]
-    if account_id:
-        cmd.extend(["-c", f"http.extraHeader={_auth_header(account_id)}"])
-    cmd.extend(args)
+    with tempfile.TemporaryDirectory(prefix="extnest-", dir=str(CACHE)) as temp_dir:
+        stage = Path(temp_dir) / "payload"
+        _safe_extract_zip(blob, stage)
 
-    proc = subprocess.run(
-        cmd,
-        cwd=str(cwd) if cwd else None,
-        text=True,
-        capture_output=True,
-        encoding="utf-8",
-        errors="replace"
-    )
-    if check and proc.returncode != 0:
-        raise RuntimeError((proc.stderr or proc.stdout or "Erro Git").strip())
-    return proc
+        manifest_path = stage / "manifest.json"
+        if not manifest_path.exists():
+            raise RuntimeError("O repositório não possui manifest.json na raiz.")
 
-def _disable_push(path):
-    # Defense in depth for every ExtNest-managed clone, public or private.
-    run_git(
-        ["remote", "set-url", "--push", "origin", "no_push://extnest-read-only"],
-        cwd=path
-    )
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception as error:
+            raise RuntimeError("manifest.json baixado é inválido.") from error
+
+        if int(manifest.get("manifest_version", 0)) < 3:
+            raise RuntimeError("A extensão baixada não é Manifest V3.")
+
+        if backup.exists():
+            shutil.rmtree(backup, ignore_errors=True)
+
+        had_previous = target.exists()
+
+        if had_previous:
+            target.replace(backup)
+
+        try:
+            shutil.move(str(stage), str(target))
+        except Exception:
+            if target.exists():
+                shutil.rmtree(target, ignore_errors=True)
+            if had_previous and backup.exists():
+                backup.replace(target)
+            raise
+        else:
+            if backup.exists():
+                shutil.rmtree(backup, ignore_errors=True)
+
+    return target
 
 def install(slug):
     item = find_by_slug(slug)
     if not item:
         raise RuntimeError("Extensão não registrada.")
 
-    target = EXTENSIONS / slug
-    if target.exists():
-        if (target / ".git").exists():
-            _disable_push(target)
-            return target
-        shutil.rmtree(target)
-
-    run_git([
-        "clone",
-        "--branch", item.get("branch") or "main",
-        "--single-branch",
-        f"https://github.com/{item['repo']}.git",
-        str(target)
-    ], account_id=item.get("account_id"))
-
-    _disable_push(target)
-    return target
+    return _deploy_archive(item)
 
 def update(slug):
     item = find_by_slug(slug)
@@ -200,25 +244,16 @@ def update(slug):
         raise RuntimeError("Extensão não registrada.")
 
     target = EXTENSIONS / slug
-    if not (target / ".git").exists():
-        raise RuntimeError("Repositório ainda não foi instalado.")
+    if not (target / "manifest.json").exists():
+        raise RuntimeError("A extensão ainda não foi instalada.")
 
-    dirty = run_git(["status", "--porcelain"], cwd=target).stdout.strip()
-    if dirty:
-        raise RuntimeError("Há alterações locais. Reverta ou salve suas alterações antes de atualizar.")
-
-    _disable_push(target)
-    run_git(
-        ["pull", "--ff-only", "origin", item.get("branch") or "main"],
-        cwd=target,
-        account_id=item.get("account_id")
-    )
-    return target
+    return _deploy_archive(item)
 
 def open_folder(slug):
     item = find_by_slug(slug)
     if not item:
         raise RuntimeError("Extensão não registrada.")
+
     target = EXTENSIONS / slug
     if os.name == "nt":
         os.startfile(str(target))
@@ -250,6 +285,7 @@ def status(slug, config_backup_exists=False):
         "repo": item.get("repo"),
         "private": bool(item.get("private")),
         "account_id": item.get("account_id"),
+        "transport": "archive",
         "local_exists": bool((EXTENSIONS / slug / "manifest.json").exists()),
         "local_path": str(EXTENSIONS / slug),
         "local_version": local_version,

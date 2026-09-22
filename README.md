@@ -24,6 +24,19 @@ O **ExtNest em si** pode ser publicado na Microsoft Edge Add-ons e Chrome Web St
 
 As extensões gerenciadas podem vir de repositórios privados ou públicos. Repositórios públicos podem ser usados sem login.
 
+## v0.5
+
+- Git removido completamente do Helper;
+- instalação e atualização usam o ZIP oficial da branch pelo GitHub API;
+- repositórios privados usam a conta GitHub já conectada;
+- repositórios públicos continuam funcionando sem conta;
+- verificação periódica continua lendo o `manifest.json` remoto e comparando versões;
+- atualização continua manual: o ExtNest apenas avisa até o usuário clicar;
+- extração segura com bloqueio de caminhos fora da pasta da extensão;
+- atualização troca a pasta de forma transacional e restaura a anterior se falhar;
+- clones antigos com `.git` são migrados automaticamente na próxima instalação/atualização;
+- Git portátil removido do instalador, reduzindo drasticamente o tamanho do Helper.
+
 ## v0.4
 
 - primeira execução com **Finalizar instalação** quando o Helper estiver ausente;
@@ -31,7 +44,7 @@ As extensões gerenciadas podem vir de repositórios privados ou públicos. Repo
 - botão muda para **Abrir instalador** quando o download termina;
 - detecção automática do Helper após a instalação;
 - `ExtNestHost.exe` empacotado com PyInstaller;
-- Git portátil incluído no Helper;
+- Git portátil incluído no Helper (removido na v0.5);
 - instalador por usuário em `%LOCALAPPDATA%\ExtNest\NativeHost`;
 - registro de Native Messaging para Edge/Chrome automático;
 - sem Python, Git for Windows, PowerShell, JSON ou Registro para usuário final;

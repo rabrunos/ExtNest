@@ -110,11 +110,37 @@ except Exception as e:
     errors.append(f"Protocolo Native Host: {e}")
 
 repos_source = (ROOT / "native-host/extnest/repos.py").read_text(encoding="utf-8")
-if 'run_git(["push"' in repos_source or "run_git(['push'" in repos_source:
-    errors.append("ExtNest GitHub layer contains git push, which is forbidden.")
+github_source = (ROOT / "native-host/extnest/github_api.py").read_text(encoding="utf-8")
+workflow_source = (ROOT / ".github/workflows/build-helper.yml").read_text(encoding="utf-8")
+installer_source = (ROOT / "installer/ExtNestHelper.iss").read_text(encoding="utf-8")
 
-if "account_id=item.get(\"account_id\")" not in repos_source:
-    errors.append("Clone/update privado não está explicitamente vinculado à conta do repositório.")
+for forbidden in ["run_git(", "shutil.which(\"git\")", "git clone", "git pull"]:
+    if forbidden in repos_source:
+        errors.append(f"Dependência Git ainda presente em repos.py: {forbidden}")
+
+if "archive_bytes" not in github_source or "_safe_extract_zip" not in repos_source:
+    errors.append("Instalação por ZIP/API do GitHub não está implementada.")
+
+if "Bundle portable Git" in workflow_source:
+    errors.append("Workflow ainda empacota Git portátil.")
+
+if "build\\helper\\git" in installer_source:
+    errors.append("Instalador ainda inclui Git portátil.")
+
+# Teste mínimo da extração segura do ZIP de repositório.
+try:
+    import io
+    with tempfile.TemporaryDirectory() as td:
+        archive_buffer = io.BytesIO()
+        with zipfile.ZipFile(archive_buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("owner-repo-sha/manifest.json", '{"manifest_version":3,"name":"Test","version":"1.0.0"}')
+            archive.writestr("owner-repo-sha/background.js", "console.log('ok');")
+        extract_to = Path(td) / "extract"
+        protocol.repos._safe_extract_zip(archive_buffer.getvalue(), extract_to)
+        if not (extract_to / "manifest.json").exists():
+            errors.append("Extração ZIP não removeu o diretório raiz do GitHub.")
+except Exception as e:
+    errors.append(f"Extração ZIP do repositório: {e}")
 
 node = shutil.which("node")
 if node:
@@ -184,6 +210,7 @@ print("- JSON OK")
 print("- Python OK")
 print("- Native protocol v3 / multi-account GitHub OK")
 print("- Public repositories without account OK")
+print("- GitHub ZIP install/update without Git OK")
 print("- JavaScript OK" if node else "- JavaScript: Node não instalado, check ignorado")
 print("- Manifest V3 + identity OK")
 print("- Layout do Store ZIP OK")

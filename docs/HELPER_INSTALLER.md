@@ -28,7 +28,6 @@ Instala em:
 
 Inclui:
 - `ExtNestHost.exe` compilado com PyInstaller;
-- Git portátil próprio;
 - `oauth-clients.json`;
 - configuração interna OAuth do build;
 - manifest Native Messaging.
@@ -104,3 +103,23 @@ native-host/setup/
 ```
 
 Eles não fazem parte da experiência do usuário final.
+
+
+## Instalação das extensões gerenciadas
+
+O Helper não inclui Git.
+
+O código das extensões é obtido pelo endpoint de archive/ZIP do GitHub:
+
+```text
+GitHub API
+→ ZIP da branch
+→ extração segura
+→ %LOCALAPPDATA%\ExtNest\Extensions\<slug>
+```
+
+Para repositórios privados, o download usa o token da conta GitHub associada ao repositório.
+
+Para repositórios públicos, não é necessário token.
+
+A verificação automática de atualização continua usando o `manifest.json` remoto; baixar o ZIP só acontece quando o usuário instala ou clica em atualizar.
