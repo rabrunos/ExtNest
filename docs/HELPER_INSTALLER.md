@@ -123,3 +123,33 @@ Para repositórios privados, o download usa o token da conta GitHub associada ao
 Para repositórios públicos, não é necessário token.
 
 A verificação automática de atualização continua usando o `manifest.json` remoto; baixar o ZIP só acontece quando o usuário instala ou clica em atualizar.
+
+
+## Versionamento independente
+
+A versão do ExtNest e a versão do Helper não precisam ser iguais.
+
+Exemplo:
+
+```text
+ExtNest 0.5.2
+Helper  0.5.1
+```
+
+é válido enquanto a extensão declarar:
+
+```text
+MIN_HELPER_VERSION = 0.5.1
+```
+
+O usuário só deve atualizar o Helper quando uma nova versão do ExtNest realmente precisar de uma operação nativa que o Helper atual não possui.
+
+Releases do Helper usam tags próprias:
+
+```text
+helper-v0.5.1
+helper-v0.5.2
+...
+```
+
+Atualizações comuns do dashboard/extensão não geram nem exigem um novo instalador do Helper.
