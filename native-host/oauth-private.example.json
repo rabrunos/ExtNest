@@ -1,0 +1,5 @@
+{
+  "github": {
+    "client_secret": "PASTE_GITHUB_OAUTH_CLIENT_SECRET_HERE"
+  }
+}
