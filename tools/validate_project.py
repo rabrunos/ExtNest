@@ -124,10 +124,37 @@ if node:
             errors.append(f"JS {file.relative_to(ROOT)}: {p.stderr.strip()}")
 
 manifest = json.loads((ROOT/"extension/manifest.json").read_text(encoding="utf-8"))
+
+for required_file in [
+    ROOT/"installer/ExtNestHelper.iss",
+    ROOT/".github/workflows/build-helper.yml",
+    ROOT/"native-host/requirements-build.txt",
+    ROOT/"docs/HELPER_INSTALLER.md",
+]:
+    if not required_file.exists():
+        errors.append(f"Arquivo obrigatório da distribuição v0.4 ausente: {required_file.relative_to(ROOT)}")
+
+main_js = (ROOT/"extension/dashboard/js/main.js").read_text(encoding="utf-8")
+constants_js = (ROOT/"extension/shared/constants.js").read_text(encoding="utf-8")
+
+for required in [
+    "Finalizar instalação",
+    "chrome.downloads.download",
+    "chrome.downloads.open",
+    "startHelperPolling",
+]:
+    if required not in main_js and required != "Finalizar instalação":
+        errors.append(f"Fluxo do Helper não contém: {required}")
+
+if "HELPER_INSTALLER_URL" not in constants_js:
+    errors.append("URL do instalador do Helper não está definida.")
 if int(manifest.get("manifest_version",0)) != 3:
     errors.append("Manifest não é V3.")
 if "identity" not in manifest.get("permissions", []):
     errors.append("Manifest precisa da permissão identity para launchWebAuthFlow.")
+for permission in ["downloads", "downloads.open"]:
+    if permission not in manifest.get("permissions", []):
+        errors.append(f"Manifest precisa da permissão {permission} para onboarding do Helper.")
 
 github_view = (ROOT/"extension/dashboard/js/views/github.js").read_text(encoding="utf-8")
 for required in ["github_accounts", "addPublicRepo", "oauth_github_disconnect"]:
