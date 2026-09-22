@@ -5,7 +5,7 @@ ExtNest é um gerenciador privado de extensões Chromium/Edge.
 ## Arquitetura
 
 ```text
-GitHub privado
+GitHub público ou privado
     │ código
     ▼
 ExtNest Native Host
@@ -22,13 +22,26 @@ ExtNest Native Host
 
 O **ExtNest em si** pode ser publicado na Microsoft Edge Add-ons e Chrome Web Store.
 
-As extensões que ele gerencia continuam privadas.
+As extensões gerenciadas podem vir de repositórios privados ou públicos. Repositórios públicos podem ser usados sem login.
+
+## v0.3
+
+- múltiplas contas GitHub simultâneas;
+- cada repositório privado fica vinculado à conta correta;
+- repositórios públicos podem ser adicionados sem conta;
+- seletor de contas do GitHub forçado no login;
+- OAuth via `chrome.identity.launchWebAuthFlow`;
+- PKCE S256 + state;
+- tokens GitHub separados por conta e protegidos por DPAPI;
+- clones públicos sem credenciais;
+- clones privados usam somente o token da conta associada;
+- slugs novos usam `owner--repo` para evitar colisões.
 
 ## v0.2
 
 - projeto refatorado em módulos pequenos;
 - GitHub PAT removido;
-- GitHub OAuth Device Flow;
+- GitHub OAuth (substituído pelo fluxo PKCE/chrome.identity na v0.3);
 - refresh de token automático;
 - Microsoft OAuth Authorization Code + PKCE;
 - Google OAuth Installed App + PKCE;
