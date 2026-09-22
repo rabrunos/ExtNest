@@ -22,6 +22,7 @@ Este projeto é deliberadamente modular.
 - `native-host/extnest/registry.py` contém a lista de extensões.
 - `native-host/extnest/config_backup.py` contém backup/restauração das configurações das extensões.
 - Extensões gerenciadas usam o ExtNest Bridge v1.
+- Todo repositório gerenciado deve possuir `.extnest.json` válido na raiz; a listagem GitHub mostra somente repositórios com esse marcador.
 - Segredos/tokens nunca entram em Git, OneDrive ou Google Drive.
 - OAuth tokens ficam protegidos localmente por DPAPI.
 - Client IDs OAuth são identificadores públicos e ficam em `native-host/oauth-clients.json`.
@@ -55,5 +56,6 @@ E confirme:
 - Python compila;
 - JavaScript passa no `node --check`, se Node estiver instalado;
 - JSONs são válidos;
-- não existe dependência de Git no Native Host;
+- não existe dependência de Git para instalar/atualizar extensões gerenciadas;
+- `native-host/extnest/dev_update.py` pode usar o Git já instalado apenas no fluxo DEV de auto-update do próprio checkout ExtNest; esse Git nunca é empacotado no Helper final;
 - ZIP de Store coloca `manifest.json` na raiz.
