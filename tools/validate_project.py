@@ -23,8 +23,18 @@ try:
     from extnest import protocol
 
     ping = protocol.dispatch({"op": "ping"})
-    if ping.get("protocol_version") != 2:
-        errors.append("Native Host não anuncia o protocolo v2.")
+    if ping.get("protocol_version") != 3:
+        errors.append("Native Host não anuncia o protocolo v3.")
+
+    protocol.github.list_accounts = lambda: [
+        {"account_id": "1", "login": "alpha"},
+        {"account_id": "2", "login": "beta"}
+    ]
+    protocol.profiles.get = lambda provider: None
+
+    state = protocol.dispatch({"op": "state_get"})
+    if len(state.get("auth", {}).get("github_accounts", [])) != 2:
+        errors.append("state_get não expõe múltiplas contas GitHub.")
 
     protocol.github.prepare = lambda redirect_uri: {
         "authorization_url": "https://example.invalid/auth",
@@ -37,13 +47,49 @@ try:
     if not prepared.get("ok"):
         errors.append("Rota oauth_github_prepare indisponível.")
 
-    protocol.github.complete = lambda callback_url: {"login": "test", "name": "Test"}
+    protocol.github.complete = lambda callback_url: {
+        "account_id": "1",
+        "login": "alpha"
+    }
     completed = protocol.dispatch({
         "op": "oauth_github_complete",
         "callback_url": "https://example.chromiumapp.org/github?code=x&state=y"
     })
-    if not completed.get("ok"):
-        errors.append("Rota oauth_github_complete indisponível.")
+    if completed.get("profile", {}).get("account_id") != "1":
+        errors.append("Rota oauth_github_complete não retorna conta.")
+
+    protocol.github_api.list_repos = lambda account_id: [
+        {"full_name": "alpha/private-ext", "private": True}
+    ]
+    listed = protocol.dispatch({
+        "op": "github_list_repos",
+        "account_id": "1"
+    })
+    if not listed.get("repos"):
+        errors.append("Listagem de repositórios por conta indisponível.")
+
+    protocol.repos.register_repo = lambda repo, branch=None, account_id=None: {
+        "repo": repo,
+        "branch": branch or "main",
+        "account_id": account_id,
+        "private": bool(account_id)
+    }
+
+    public_repo = protocol.dispatch({
+        "op": "repo_register",
+        "repo": "thirdparty/public-ext",
+        "account_id": None
+    })
+    if public_repo.get("item", {}).get("account_id") is not None:
+        errors.append("Repositório público não deve exigir conta.")
+
+    private_repo = protocol.dispatch({
+        "op": "repo_register",
+        "repo": "alpha/private-ext",
+        "account_id": "1"
+    })
+    if private_repo.get("item", {}).get("account_id") != "1":
+        errors.append("Repositório privado não foi vinculado à conta correta.")
 
     protocol.microsoft.login = lambda: {"name": "Test"}
     microsoft_login = protocol.dispatch({
@@ -67,6 +113,9 @@ repos_source = (ROOT / "native-host/extnest/repos.py").read_text(encoding="utf-8
 if 'run_git(["push"' in repos_source or "run_git(['push'" in repos_source:
     errors.append("ExtNest GitHub layer contains git push, which is forbidden.")
 
+if "account_id=item.get(\"account_id\")" not in repos_source:
+    errors.append("Clone/update privado não está explicitamente vinculado à conta do repositório.")
+
 node = shutil.which("node")
 if node:
     for file in (ROOT / "extension").rglob("*.js"):
@@ -79,6 +128,11 @@ if int(manifest.get("manifest_version",0)) != 3:
     errors.append("Manifest não é V3.")
 if "identity" not in manifest.get("permissions", []):
     errors.append("Manifest precisa da permissão identity para launchWebAuthFlow.")
+
+github_view = (ROOT/"extension/dashboard/js/views/github.js").read_text(encoding="utf-8")
+for required in ["github_accounts", "addPublicRepo", "oauth_github_disconnect"]:
+    if required not in github_view:
+        errors.append(f"GitHub UI não contém suporte esperado: {required}")
 
 with tempfile.TemporaryDirectory() as td:
     zpath = Path(td)/"store.zip"
@@ -101,7 +155,8 @@ if errors:
 print("ExtNest: validação OK")
 print("- JSON OK")
 print("- Python OK")
-print("- Native protocol v2 / GitHub OAuth routing OK")
+print("- Native protocol v3 / multi-account GitHub OK")
+print("- Public repositories without account OK")
 print("- JavaScript OK" if node else "- JavaScript: Node não instalado, check ignorado")
 print("- Manifest V3 + identity OK")
 print("- Layout do Store ZIP OK")
